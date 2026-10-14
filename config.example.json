@@ -1,0 +1,42 @@
+{
+  "station_name": "SMT Line 1",
+  "input_folder": "./input",
+  "file_pattern": "*.csv",
+  "backup_folder": "./backup",
+  "output_folder": "./output",
+  "output_format": "json",
+  "csv_layout": "sections",
+  "selections": [
+    "L1xM8",
+    "ERRORS",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+  ],
+  "manual_inputs": [
+    {
+      "label": "Operator",
+      "value": ""
+    },
+    {
+      "label": "Work order",
+      "value": ""
+    }
+  ],
+  "shared_enabled": false,
+  "shared_folder": "",
+  "api_enabled": false,
+  "api_url": "",
+  "api_token": "",
+  "api_body": "raw",
+  "api_timeout": 20,
+  "skip_duplicates": true,
+  "poll_seconds": 3,
+  "stable_seconds": 2,
+  "ledger_path": "./linebridge_ledger.db"
+}

@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LineBridge Control Panel</title>
+<style>
+:root{
+  --bg:#f3f4f1; --panel:#ffffff; --ink:#15191c; --muted:#5d666d; --line:#dfe2dd; --soft:#eef0ec;
+  --accent:#0f7b6c; --accent-ink:#ffffff; --accent-soft:#dff1ed;
+  --warn:#b26b00; --warn-soft:#fbefd9; --bad:#b3261e; --bad-soft:#fbe4e2; --ok:#1d7a3a; --ok-soft:#e1f3e6;
+  --mono:ui-monospace,"Cascadia Mono","SFMono-Regular",Consolas,monospace;
+  --sans:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#101315; --panel:#171b1e; --ink:#e7eae8; --muted:#97a1a7; --line:#2a3034; --soft:#1e2326;
+  --accent:#3cc2ad; --accent-ink:#06201c; --accent-soft:#16312d;
+  --warn:#f0b04a; --warn-soft:#3a2c12; --bad:#ff8a80; --bad-soft:#3b1a18; --ok:#6fd38c; --ok-soft:#163022;
+}}
+:root[data-theme="light"]{--bg:#f3f4f1;--panel:#ffffff;--ink:#15191c;--muted:#5d666d;--line:#dfe2dd;--soft:#eef0ec;--accent:#0f7b6c;--accent-ink:#ffffff;--accent-soft:#dff1ed;--warn:#b26b00;--warn-soft:#fbefd9;--bad:#b3261e;--bad-soft:#fbe4e2;--ok:#1d7a3a;--ok-soft:#e1f3e6}
+:root[data-theme="dark"]{--bg:#101315;--panel:#171b1e;--ink:#e7eae8;--muted:#97a1a7;--line:#2a3034;--soft:#1e2326;--accent:#3cc2ad;--accent-ink:#06201c;--accent-soft:#16312d;--warn:#f0b04a;--warn-soft:#3a2c12;--bad:#ff8a80;--bad-soft:#3b1a18;--ok:#6fd38c;--ok-soft:#163022}
+:root[data-theme="contrast"]{--bg:#000;--panel:#101010;--ink:#fff;--muted:#e0e0e0;--line:#fff;--soft:#202020;--accent:#00f0c0;--accent-ink:#000;--accent-soft:#003b30;--warn:#ffd400;--warn-soft:#453900;--bad:#ff7070;--bad-soft:#4d0000;--ok:#70ff90;--ok-soft:#003d18}
+html[data-font-size="small"] body{font-size:13px} html[data-font-size="large"] body{font-size:16px} html[data-font-size="xlarge"] body{font-size:18px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--sans)}
+button,input,select{font:inherit;color:inherit}
+header{display:flex;align-items:center;gap:16px;padding:14px 24px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:.2px}
+.brand svg{flex:none}
+.station{color:var(--muted);font-weight:500}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:4px 11px;border-radius:99px;font-size:12.5px;font-weight:600;background:var(--soft);color:var(--muted)}
+.pill i{width:8px;height:8px;border-radius:50%;background:currentColor}
+.pill.on{background:var(--ok-soft);color:var(--ok)} .pill.on i{animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.spacer{flex:1}
+.btn{border:1px solid var(--line);background:var(--panel);padding:7px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.sm{padding:4px 10px;font-size:12.5px}
+main{max-width:1180px;margin:0 auto;padding:20px 24px 60px}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kpi b{display:block;font-size:26px;font-variant-numeric:tabular-nums;line-height:1.15}
+.kpi span{color:var(--muted);font-size:12.5px}
+.kpi.wide b{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:7px}
+.kpi.alert b{color:var(--bad)} .kpi.queue b{color:var(--warn)}
+nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px;overflow-x:auto}
+nav.tabs button{border:0;background:none;padding:10px 14px;cursor:pointer;color:var(--muted);font-weight:600;border-bottom:2px solid transparent;white-space:nowrap}
+nav.tabs button.active{color:var(--ink);border-color:var(--accent)}
+.tab{display:none}.tab.active{display:block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:14px}
+.card h3{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:9px}
+.card h3 .n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;background:var(--accent-soft);color:var(--accent);font-size:12px}
+.card p.hint{margin:0 0 14px;color:var(--muted);font-size:13px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.row{display:grid;grid-template-columns:170px 1fr auto;gap:10px;align-items:center;margin-bottom:9px}
+label.l{color:var(--muted);font-size:13px}
+input[type=text],input[type=password],select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);min-width:0}
+input:focus,select:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+.sel-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.sel-grid label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
+.sel-grid input{font-family:var(--mono);font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.chip{font-family:var(--mono);font-size:12px;padding:3px 8px;border-radius:6px;background:var(--soft);color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--panel);padding:7px 16px;cursor:pointer;font-weight:600;color:var(--muted)}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.toggle{display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer}
+.toggle input{width:18px;height:18px;accent-color:var(--accent)}
+.dest{border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:10px}
+.dest.off .dest-body{opacity:.45}
+.result{font-size:12.5px;margin-top:6px;min-height:18px}
+.result.ok{color:var(--ok)} .result.bad{color:var(--bad)}
+.savebar{position:sticky;bottom:0;background:linear-gradient(transparent,var(--bg) 35%);padding:18px 0 4px;display:flex;gap:10px;align-items:center}
+.drop{display:block;margin-top:4px;border:2px dashed var(--line);border-radius:12px;padding:26px;text-align:center;color:var(--muted);cursor:pointer}
+.drop.hover{border-color:var(--accent);background:var(--accent-soft)}
+.split{display:grid;grid-template-columns:380px 1fr;gap:14px;align-items:start}
+.tlist{display:flex;flex-direction:column;gap:8px}
+.titem{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:2px 10px}
+.titem.chosen{border-color:var(--accent);background:var(--accent-soft)}
+.titem b{font-family:var(--mono)}
+.titem small{color:var(--muted);grid-column:1}
+.titem .btn{grid-row:1/3;grid-column:2;align-self:center}
+pre{margin:0;font:12.5px/1.5 var(--mono);background:var(--soft);border-radius:10px;padding:14px;overflow:auto;max-height:560px;white-space:pre}
+.warns{margin:0 0 10px;padding:0;list-style:none}
+.warns li{background:var(--warn-soft);color:var(--warn);padding:6px 10px;border-radius:8px;margin-bottom:5px;font-size:13px}
+table.hist{width:100%;border-collapse:collapse;font-size:13px}
+.hist th{text-align:left;color:var(--muted);font-weight:600;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.hist td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+.hist td.m{font-family:var(--mono);font-size:12px}
+.hist td:first-child{white-space:nowrap}
+.badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:600;background:var(--soft);color:var(--muted)}
+.badge.ok{background:var(--ok-soft);color:var(--ok)} .badge.failed{background:var(--bad-soft);color:var(--bad)}
+.badge.duplicate,.badge.queued{background:var(--warn-soft);color:var(--warn)}
+.scroll{overflow-x:auto}
+#log{height:520px;max-height:none}
+.lv-WARNING{color:var(--warn)} .lv-ERROR{color:var(--bad)}
+.empty{color:var(--muted);text-align:center;padding:30px}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);width:min(560px,94vw);padding:0}
+dialog::backdrop{background:#0008}
+.dlg-h{padding:14px 18px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12.5px;word-break:break-all}
+.dlg-b{max-height:50vh;overflow:auto}
+.dlg-b div{padding:8px 18px;cursor:pointer;border-bottom:1px solid var(--soft)}
+.dlg-b div:hover{background:var(--accent-soft)}
+.dlg-f{padding:12px 18px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--line)}
+.checklist{display:grid;gap:8px;margin-top:12px}.checkrow{display:grid;grid-template-columns:28px 190px 1fr;gap:10px;align-items:start;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--soft)}.checkrow b{font-size:13px}.checkrow small{color:var(--muted);overflow-wrap:anywhere}.checkrow.ok .checkicon{color:var(--ok)}.checkrow.bad .checkicon{color:var(--bad)}.checkrow.skipped .checkicon{color:var(--muted)}.checkicon{font-size:18px;font-weight:700;line-height:1}.demo-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.demo-step{border:1px solid var(--line);border-radius:9px;padding:11px;background:var(--soft)}.demo-step b{display:block;color:var(--accent);margin-bottom:4px}.code{font-family:var(--mono);background:var(--soft);border:1px solid var(--line);padding:8px 10px;border-radius:7px;display:inline-block;user-select:all}
+@media (max-width:860px){
+  .kpis{grid-template-columns:repeat(2,1fr)} .kpi.wide{grid-column:span 2}
+  .grid2,.split{grid-template-columns:1fr} .sel-grid{grid-template-columns:repeat(2,1fr)} .demo-steps{grid-template-columns:1fr} .checkrow{grid-template-columns:28px 1fr}.checkrow small{grid-column:2}
+  .row{grid-template-columns:1fr auto} .row label.l{grid-column:1/-1}
+  header{padding:12px 16px} main{padding:16px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="var(--accent)"/><path d="M5 17h4l3-8 3 8h6" fill="none" stroke="var(--accent-ink)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    LineBridge <span class="station" id="station"></span>
+  </div>
+  <span class="pill" id="pill"><i></i><span>Stopped</span></span>
+  <div class="spacer"></div>
+  <button class="btn" id="btnOnce">Run once</button>
+  <button class="btn primary" id="btnStart">Start watching</button>
+  <button class="btn danger" id="btnStop" disabled>Stop</button>
+  <button class="btn" id="btnAppearance" title="Change colors and text size">Appearance</button>
+</header>
+
+<main>
+  <section class="kpis">
+    <div class="kpi"><b id="kOk">0</b><span>Files converted</span></div>
+    <div class="kpi" id="kpiPending"><b id="kPending">0</b><span>Waiting in machine folder</span></div>
+    <div class="kpi queue"><b id="kQueue">0</b><span>Queued for delivery</span></div>
+    <div class="kpi alert"><b id="kBad">0</b><span>Failed · duplicates blocked</span></div>
+    <div class="kpi wide"><b id="kLast">—</b><span>Last file</span></div>
+  </section>
+
+  <nav class="tabs">
+    <button data-tab="setup" class="active">Setup</button>
+    <button data-tab="preview">Preview &amp; test</button>
+    <button data-tab="history">History</button>
+    <button data-tab="log">Live log</button>
+  </nav>
+
+  <!-- ============ SETUP ============ -->
+  <section class="tab active" id="tab-setup">
+    <div class="card">
+      <h3><span class="n">✓</span>Integration check <span class="chip" style="margin-left:auto" id="checkSummary">Not run</span></h3>
+      <p class="hint">Use this before a live run. It checks the machine folder, parser, output/archive folders, and both delivery paths. The API check sends only a small test payload when you click the button.</p>
+      <button class="btn primary" id="btnIntegration">Run integration check</button>
+      <div class="result" id="integrationMsg"></div>
+      <div class="checklist" id="checklist"><div class="empty">No checks run yet.</div></div>
+    </div>
+    <div class="card">
+      <h3>Live demo recipe</h3>
+      <p class="hint">For a real end-to-end demonstration, run the simulator and mock customer MES on this computer. The panel will show files moving from machine folder → transformed output → shared folder/API → back-up.</p>
+      <div class="demo-steps"><div class="demo-step"><b>1 · Start</b><span>Run <span class="code">python demo/run_demo.py --reset</span></span></div><div class="demo-step"><b>2 · Observe</b><span>Open the panel at <span class="code">localhost:8600</span> and click Run integration check.</span></div><div class="demo-step"><b>3 · Prove retry</b><span>On Customer MES, click Simulate outage; restore it and watch the queue drain.</span></div></div>
+    </div>
+    <div class="card">
+      <h3><span class="n">1</span>Folders</h3>
+      <p class="hint">Where the machine writes its CSV logs, where used files are archived, and where converted files are created.</p>
+      <div class="row"><label class="l">Station name</label><input type="text" id="station_name"><span></span></div>
+      <div class="row"><label class="l">Machine CSV folder</label><input type="text" id="input_folder"><button class="btn sm" data-browse="input_folder">Browse</button></div>
+      <div class="row"><label class="l">File pattern</label><input type="text" id="file_pattern"><span></span></div>
+      <div class="row"><label class="l">Back-up folder</label><input type="text" id="backup_folder"><button class="btn sm" data-browse="backup_folder">Browse</button></div>
+      <div class="row"><label class="l">Output folder</label><input type="text" id="output_folder"><button class="btn sm" data-browse="output_folder">Browse</button></div>
+    </div>
+
+    <div class="card">
+      <h3><span class="n">2</span>Output format</h3>
+      <p class="hint">The format your MES expects.</p>
+      <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center">
+        <div class="seg" id="fmtSeg"><button data-v="json">JSON</button><button data-v="csv">CSV</button><button data-v="txt">TXT</button></div>
+        <label class="l" id="layoutWrap" style="display:flex;gap:8px;align-items:center">CSV layout
+          <select id="csv_layout" style="width:auto"><option value="sections">Sections (one block per table)</option><option value="flat">Flat (one row per record)</option></select>
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><span class="n">3</span>Data selection <span class="chip" style="margin-left:auto">up to 10</span></h3>
+      <p class="hint">Pick which tables or cell ranges go into the output. Leave all empty to include every table.</p>
+      <div class="sel-grid" id="selGrid"></div>
+      <div class="chips">
+        <span class="chip">L1xM8</span><span class="chip">L1 x M8 → cell range if no such table</span><span class="chip">A1:B7</span><span class="chip">A12:I*  (to last row)</span><span class="chip">L1xM8[Ref,Result]</span><span class="chip">L2x*</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><span class="n">4</span>Manual inputs</h3>
+      <p class="hint">Typed by the operator and written into every output file (for example Operator, Shift, Work order).</p>
+      <div class="grid2" id="manualGrid"></div>
+    </div>
+
+    <div class="card">
+      <h3><span class="n">5</span>Delivery</h3>
+      <p class="hint">Choose one or both. If a destination is down, files wait in a queue and are re-sent automatically.</p>
+      <div class="dest" id="dShared">
+        <label class="toggle"><input type="checkbox" id="shared_enabled"> Copy to shared folder</label>
+        <div class="dest-body" style="margin-top:10px">
+          <div class="row"><label class="l">Shared folder / UNC path</label><input type="text" id="shared_folder" placeholder="\\MES-SERVER\inbox"><button class="btn sm" data-browse="shared_folder">Browse</button></div>
+          <button class="btn sm" id="testShared">Test folder</button><div class="result" id="rShared"></div>
+        </div>
+      </div>
+      <div class="dest" id="dApi">
+        <label class="toggle"><input type="checkbox" id="api_enabled"> Send to customer site by API link</label>
+        <div class="dest-body" style="margin-top:10px">
+          <div class="row"><label class="l">API link (URL)</label><input type="text" id="api_url" placeholder="https://mes.customer.com/api/upload"><span></span></div>
+          <div class="row"><label class="l">Token (optional)</label><input type="password" id="api_token"><span></span></div>
+          <div class="row"><label class="l">Body type</label><select id="api_body"><option value="raw">Raw file body</option><option value="multipart">Multipart form upload</option></select><span></span></div>
+          <button class="btn sm" id="testApi">Test connection</button><div class="result" id="rApi"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="savebar"><button class="btn primary" id="btnSave">Save settings</button><span id="saveMsg" class="l"></span></div>
+  </section>
+
+  <!-- ============ PREVIEW ============ -->
+  <section class="tab" id="tab-preview">
+    <div class="card">
+      <h3>Try it on a real machine file</h3>
+      <p class="hint">Drop one CSV here. You will see every table LineBridge finds, with its cell range, and the exact file it would send using the current setup (saved or not).</p>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label class="drop" id="drop" style="flex:1"><input type="file" id="file" accept=".csv,.txt,.log" hidden><span id="dropTxt">Drop a CSV file or click to choose</span></label><button class="btn" id="btnSample">Load bundled sample</button></div>
+    </div>
+    <div class="split">
+      <div class="card"><h3>Tables found</h3><p class="hint">Click Add to put a table into the next free selection box.</p><div class="tlist" id="tlist"><div class="empty">No file loaded</div></div></div>
+      <div class="card"><h3>Output preview <span class="chip" id="pvFmt" style="margin-left:auto"></span></h3><ul class="warns" id="warns"></ul><pre id="pv">—</pre></div>
+    </div>
+  </section>
+
+  <!-- ============ HISTORY ============ -->
+  <section class="tab" id="tab-history">
+    <div class="card scroll">
+      <h3>Audit trail</h3><p class="hint">Every file seen, with its fingerprint and delivery outcome. Kept in a local SQLite ledger.</p>
+      <table class="hist"><thead><tr><th>Time</th><th>Source file</th><th>Status</th><th>Data</th><th>Output</th><th>Shared</th><th>API</th><th>SHA-256</th><th>Note</th></tr></thead><tbody id="hist"></tbody></table>
+    </div>
+  </section>
+
+  <!-- ============ LOG ============ -->
+  <section class="tab" id="tab-log"><div class="card"><pre id="log"></pre></div></section>
+</main>
+
+<dialog id="appearanceDlg"><div class="dlg-h">Appearance</div><div style="padding:18px"><div class="row"><label class="l">Theme</label><select id="themeSelect"><option value="system">Use system setting</option><option value="light">Light</option><option value="dark">Dark</option><option value="contrast">High contrast</option></select><span></span></div><div class="row"><label class="l">Text size</label><select id="fontSelect"><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option><option value="xlarge">Extra large</option></select><span></span></div><p class="hint" style="margin:14px 0 0">These preferences stay on this computer and do not change the machine or MES profile.</p></div><div class="dlg-f"><span class="spacer"></span><button class="btn primary" id="appearanceDone">Done</button></div></dialog>
+<dialog id="dlg"><div class="dlg-h" id="dlgPath"></div><div class="dlg-b" id="dlgList"></div>
+  <div class="dlg-f"><button class="btn" id="dlgUp">Up one level</button><span class="spacer"></span><button class="btn" id="dlgCancel">Cancel</button><button class="btn primary" id="dlgOk">Use this folder</button></div></dialog>
+
+<script>
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const api = async (p, body) => {
+  const r = await fetch(p, body === undefined ? {} : {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+  const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j;
+};
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const TEXT = ["station_name","input_folder","file_pattern","backup_folder","output_folder","shared_folder","api_url","api_token"];
+let cfg = {}, fmt = "json", logSince = 0, lastCsv = null;
+
+// ---------- local operator preferences
+let appearance = {theme: "system", font: "medium"};
+try { appearance = {...appearance, ...JSON.parse(localStorage.getItem("linebridge.appearance") || "{}")} } catch {}
+function applyAppearance(){
+  document.documentElement.dataset.theme = appearance.theme === "system" ? "" : appearance.theme;
+  document.documentElement.dataset.fontSize = appearance.font;
+  try { localStorage.setItem("linebridge.appearance", JSON.stringify(appearance)); } catch {}
+}
+applyAppearance();
+
+// ---------- build selection + manual inputs
+for (let i = 0; i < 10; i++) $("#selGrid").insertAdjacentHTML("beforeend",
+  `<div><label>Selection ${i+1}</label><input type="text" class="sel" placeholder="${i===0?'e.g. L1xM8':''}"></div>`);
+for (let i = 0; i < 2; i++) $("#manualGrid").insertAdjacentHTML("beforeend",
+  `<div><div class="row" style="grid-template-columns:110px 1fr"><label class="l">Input ${i+1} name</label><input type="text" class="mlabel" placeholder="${i?'Shift':'Operator'}"></div>
+   <div class="row" style="grid-template-columns:110px 1fr"><label class="l">Value</label><input type="text" class="mvalue"></div></div>`);
+
+// ---------- config <-> form
+function fill(c){
+  cfg = c; TEXT.forEach(k => $("#"+k).value = c[k] ?? "");
+  $$(".sel").forEach((el,i) => el.value = c.selections[i] || "");
+  $$(".mlabel").forEach((el,i) => el.value = c.manual_inputs[i].label);
+  $$(".mvalue").forEach((el,i) => el.value = c.manual_inputs[i].value);
+  $("#shared_enabled").checked = c.shared_enabled; $("#api_enabled").checked = c.api_enabled;
+  $("#api_body").value = c.api_body; $("#csv_layout").value = c.csv_layout; setFmt(c.output_format); destState();
+  $("#station").textContent = c.station_name ? "· " + c.station_name : "";
+}
+function collect(){
+  const c = {...cfg}; TEXT.forEach(k => c[k] = $("#"+k).value.trim());
+  c.selections = $$(".sel").map(e => e.value.trim());
+  c.manual_inputs = $$(".mlabel").map((e,i) => ({label:e.value.trim(), value:$$(".mvalue")[i].value}));
+  c.shared_enabled = $("#shared_enabled").checked; c.api_enabled = $("#api_enabled").checked;
+  c.api_body = $("#api_body").value; c.csv_layout = $("#csv_layout").value; c.output_format = fmt; return c;
+}
+function setFmt(v){ fmt = v; $$("#fmtSeg button").forEach(b => b.classList.toggle("on", b.dataset.v===v)); $("#layoutWrap").style.visibility = v==="csv"?"visible":"hidden"; }
+function destState(){ $("#dShared").classList.toggle("off", !$("#shared_enabled").checked); $("#dApi").classList.toggle("off", !$("#api_enabled").checked); }
+$$("#fmtSeg button").forEach(b => b.onclick = () => { setFmt(b.dataset.v); refreshPreview(); });
+$("#shared_enabled").onchange = $("#api_enabled").onchange = destState;
+$("#csv_layout").onchange = refreshPreview;
+$$(".sel").forEach(e => e.addEventListener("change", refreshPreview));
+
+$("#btnSave").onclick = async () => {
+  try { const r = await api("/api/config", collect()); fill(r.config); flash("#saveMsg", "Saved ✓"); }
+  catch(e){ flash("#saveMsg", "Error: " + e.message); }
+};
+function flash(sel, msg){ $(sel).textContent = msg; setTimeout(() => $(sel).textContent = "", 3000); }
+
+// ---------- integration preflight + appearance
+function renderChecks(r){
+  $("#checkSummary").textContent = r.ok ? "Ready" : "Needs attention";
+  $("#integrationMsg").className = "result " + (r.ok ? "ok" : "bad");
+  $("#integrationMsg").textContent = r.message;
+  $("#checklist").innerHTML = r.checks.map(c => {
+    const state = c.ok ? (c.kind === "skipped" ? "skipped" : "ok") : "bad";
+    const icon = c.ok ? (state === "skipped" ? "–" : "✓") : "!";
+    return '<div class="checkrow ' + state + '"><span class="checkicon">' + icon + '</span><b>' +
+      esc(c.label) + '</b><small>' + esc(c.detail) + '</small></div>';
+  }).join("");
+}
+$("#btnIntegration").onclick = async () => {
+  $("#integrationMsg").className = "result"; $("#integrationMsg").textContent = "Checking…";
+  try { renderChecks(await api("/api/integration-check", {config: collect(), check_api: true})); }
+  catch(e){ $("#integrationMsg").className = "result bad"; $("#integrationMsg").textContent = "Check failed: " + e.message; }
+};
+$("#btnAppearance").onclick = () => {
+  $("#themeSelect").value = appearance.theme; $("#fontSelect").value = appearance.font;
+  $("#appearanceDlg").showModal();
+};
+$("#appearanceDone").onclick = () => {
+  appearance = {theme:$("#themeSelect").value, font:$("#fontSelect").value};
+  applyAppearance(); $("#appearanceDlg").close();
+};
+
+// ---------- tabs
+$$("nav.tabs button").forEach(b => b.onclick = () => {
+  $$("nav.tabs button").forEach(x => x.classList.toggle("active", x===b));
+  $$(".tab").forEach(t => t.classList.toggle("active", t.id === "tab-"+b.dataset.tab));
+});
+
+// ---------- run control
+$("#btnStart").onclick = async () => { await api("/api/config", collect()); await api("/api/start", {}); poll(); };
+$("#btnStop").onclick = async () => { await api("/api/stop", {}); poll(); };
+$("#btnOnce").onclick = async () => { await api("/api/config", collect()); await api("/api/run-once", {}); setTimeout(poll, 400); };
+
+// ---------- tests
+async function test(btn, path, out){
+  $(out).className = "result"; $(out).textContent = "Testing…";
+  const r = await api(path, {config: collect()});
+  $(out).className = "result " + (r.ok ? "ok" : "bad"); $(out).textContent = r.message;
+}
+$("#testApi").onclick = () => test("#testApi", "/api/test-api", "#rApi");
+$("#testShared").onclick = () => test("#testShared", "/api/test-shared", "#rShared");
+
+// ---------- folder browser
+let browseTarget = null, browsePath = "";
+async function browse(path){
+  const r = await api("/api/dirs?path=" + encodeURIComponent(path));
+  browsePath = r.path; $("#dlgPath").textContent = r.path || "Drives"; $("#dlgUp").dataset.p = r.parent;
+  $("#dlgList").innerHTML = r.dirs.length ? r.dirs.map(d => `<div data-d="${esc(d)}">📁 ${esc(d)}</div>`).join("") : `<div class="empty">${esc(r.error || "No sub-folders")}</div>`;
+  $$("#dlgList div[data-d]").forEach(el => el.onclick = () => browse(r.path ? r.path.replace(/[\\/]$/,"") + (r.path.includes("\\") ? "\\" : "/") + el.dataset.d : el.dataset.d));
+}
+$$("[data-browse]").forEach(b => b.onclick = () => { browseTarget = b.dataset.browse; $("#dlg").showModal(); browse($("#"+browseTarget).value); });
+$("#dlgUp").onclick = () => browse($("#dlgUp").dataset.p);
+$("#dlgCancel").onclick = () => $("#dlg").close();
+$("#dlgOk").onclick = () => { $("#"+browseTarget).value = browsePath; $("#dlg").close(); };
+
+// ---------- preview
+const drop = $("#drop");
+["dragover","dragenter"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("hover"); }));
+["dragleave","drop"].forEach(ev => drop.addEventListener(ev, () => drop.classList.remove("hover")));
+drop.addEventListener("drop", e => { e.preventDefault(); if (e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); });
+$("#file").onchange = e => e.target.files[0] && load(e.target.files[0]);
+async function load(f){ lastCsv = {name:f.name, csv: await f.text()}; $("#dropTxt").textContent = "Loaded: " + f.name + " — drop another to replace"; refreshPreview(); }
+$("#btnSample").onclick = async () => {
+  const s = await api("/api/sample"); lastCsv = s;
+  $("#dropTxt").textContent = "Loaded bundled sample: " + s.name; refreshPreview();
+};
+async function refreshPreview(){
+  if (!lastCsv) return;
+  const r = await api("/api/preview", {...lastCsv, config: collect()});
+  $("#tlist").innerHTML = r.tables.map(t => `<div class="titem ${r.chosen.includes(t.name)?"chosen":""}">
+      <b>${esc(t.name)}</b><button class="btn sm" data-add="${esc(t.name)}">${r.chosen.includes(t.name)?"Selected":"Add"}</button>
+      <small>${esc(t.range)} · ${t.row_count} row${t.row_count===1?'':'s'} · ${t.columns.length} cols</small>
+      <small>${esc(t.columns.join(", "))}</small></div>`).join("") || `<div class="empty">No tables detected</div>`;
+  $$("[data-add]").forEach(b => b.onclick = () => {
+    const sels = $$(".sel"); if (sels.some(s => s.value.trim() === b.dataset.add)) return;
+    const free = sels.find(s => !s.value.trim()); if (free){ free.value = b.dataset.add; refreshPreview(); }
+  });
+  $("#warns").innerHTML = r.warnings.map(w => `<li>${esc(w)}</li>`).join("");
+  $("#pv").textContent = r.output || "Nothing selected matches this file.";
+  $("#pvFmt").textContent = r.format.toUpperCase() + (r.chosen.length ? ` · ${r.chosen.length} block(s)` : "");
+}
+
+// ---------- status polling
+const badge = s => `<span class="badge ${esc((s||"").split(" ")[0])}">${esc(s || "—")}</span>`;
+async function poll(){
+  let s; try { s = await api("/api/status?since=" + logSince); } catch { return; }
+  $("#pill").classList.toggle("on", s.running); $("#pill span").textContent = s.running ? "Watching" : "Stopped";
+  $("#btnStart").disabled = s.running; $("#btnStop").disabled = !s.running;
+  $("#kOk").textContent = s.stats.ok; $("#kPending").textContent = s.pending;
+  $("#kQueue").textContent = s.queued.shared + s.queued.api;
+  $("#kBad").textContent = `${s.stats.failed} · ${s.stats.duplicate}`;
+  $("#kLast").textContent = s.stats.last ? `${s.stats.last[1]}  (${s.stats.last[0].slice(11)})` : "—";
+  $("#hist").innerHTML = s.history.map(h => `<tr><td>${esc((h.processed_at||"").replace("T"," "))}</td><td class="m">${esc(h.source)}</td>
+    <td>${badge(h.status)}</td><td class="m">${esc(h.tables)}</td><td class="m">${esc(h.output)}</td>
+    <td>${badge(h.shared)}</td><td>${badge(h.api)}</td><td class="m" title="${esc(h.sha256)}">${esc((h.sha256||"").slice(0,10))}</td><td>${esc(h.message)}</td></tr>`).join("")
+    || `<tr><td colspan="9" class="empty">No files processed yet</td></tr>`;
+  if (s.logs.length){
+    const el = $("#log"), atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 30;
+    el.insertAdjacentHTML("beforeend", s.logs.map(l => `<span class="lv-${l.level}">${l.t}  ${l.level.padEnd(7)} ${esc(l.msg)}</span>\n`).join(""));
+    logSince = s.logs.at(-1).id; if (atBottom) el.scrollTop = el.scrollHeight;
+  }
+}
+api("/api/config").then(fill); poll(); setInterval(poll, 1500);
+</script>
+</body>
+</html>

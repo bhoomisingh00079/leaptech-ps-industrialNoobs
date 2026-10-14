@@ -1,0 +1,7 @@
+__pycache__/
+*.db
+config.json
+demo/workspace/
+input/
+output/
+backup/
