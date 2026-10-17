@@ -5,4 +5,5 @@ demo/workspace/
 input/
 output/
 backup/
-# *.zip
+*.zip
+*.DS_Store

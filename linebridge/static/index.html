@@ -39,6 +39,14 @@ header{display:flex;align-items:center;gap:16px;padding:14px 24px;background:var
 .btn.danger{color:var(--bad)}
 .btn:disabled{opacity:.45;cursor:default}
 .btn.sm{padding:4px 10px;font-size:12.5px}
+.tip{position:relative}
+.tip[data-tip]::after{content:attr(data-tip);position:absolute;top:calc(100% + 7px);left:50%;z-index:20;width:max-content;max-width:min(260px,80vw);padding:6px 9px;border:1px solid var(--line);border-radius:6px;background:var(--ink);color:var(--panel);box-shadow:0 3px 12px #0003;font-size:12px;font-weight:500;line-height:1.35;text-align:left;white-space:normal;pointer-events:none;opacity:0;visibility:hidden;transform:translate(-50%,-2px);transition:opacity .12s ease,transform .12s ease,visibility .12s}
+.tip[data-tip]:hover::after,.tip[data-tip]:focus-visible::after,.tip[data-tip]:focus-within::after{opacity:1;visibility:visible;transform:translate(-50%,0)}
+.guide-trigger{width:32px;height:32px;padding:0;border-radius:50%;font-weight:700}
+.guide-steps{list-style:none;padding:0;margin:0}
+.guide-steps li{display:grid;grid-template-columns:155px 1fr;gap:12px;padding:10px 18px;border-bottom:1px solid var(--soft)}
+.guide-steps b{color:var(--accent)}
+.guide-steps span{color:var(--muted)}
 main{max-width:1180px;margin:0 auto;padding:20px 24px 60px}
 .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:18px}
 .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
@@ -46,9 +54,13 @@ main{max-width:1180px;margin:0 auto;padding:20px 24px 60px}
 .kpi span{color:var(--muted);font-size:12.5px}
 .kpi.wide b{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:7px}
 .kpi.alert b{color:var(--bad)} .kpi.queue b{color:var(--warn)}
-nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px;overflow-x:auto}
-nav.tabs button{border:0;background:none;padding:10px 14px;cursor:pointer;color:var(--muted);font-weight:600;border-bottom:2px solid transparent;white-space:nowrap}
-nav.tabs button.active{color:var(--ink);border-color:var(--accent)}
+nav.tabs{display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid var(--line);margin-bottom:18px;overflow:visible}
+nav.tabs button{border:0;background:none;padding:10px 14px;cursor:pointer;color:var(--muted);font:inherit;font-weight:600;border-bottom:2px solid transparent;white-space:nowrap;transition:color .12s ease,background .12s ease,border-color .12s ease}
+nav.tabs button:hover{color:var(--ink);background:var(--soft)}
+nav.tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;color:var(--ink)}
+nav.tabs button.active{color:var(--accent);border-color:var(--accent)}
+nav.tabs button.tip[data-tip]::after{top:auto;bottom:calc(100% + 7px);transform:translate(-50%,2px)}
+nav.tabs button.tip[data-tip]:hover::after,nav.tabs button.tip[data-tip]:focus-visible::after{transform:translate(-50%,0)}
 .tab{display:none}.tab.active{display:block}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:14px}
 .card h3{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:9px}
@@ -120,21 +132,22 @@ dialog::backdrop{background:#0008}
     <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="var(--accent)"/><path d="M5 17h4l3-8 3 8h6" fill="none" stroke="var(--accent-ink)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     LineBridge <span class="station" id="station"></span>
   </div>
-  <span class="pill" id="pill"><i></i><span>Stopped</span></span>
+  <span class="pill tip" id="pill" tabindex="0" data-tip="Watching means new machine files are being checked automatically."><i></i><span>Stopped</span></span>
   <div class="spacer"></div>
   <button class="btn" id="btnOnce">Run once</button>
   <button class="btn primary" id="btnStart">Start watching</button>
   <button class="btn danger" id="btnStop" disabled>Stop</button>
-  <button class="btn" id="btnAppearance" title="Change colors and text size">Appearance</button>
+  <button class="btn" id="btnAppearance">Appearance</button>
+  <button class="btn guide-trigger" id="btnGuide" aria-label="Open user guide" title="Open the short user guide">?</button>
 </header>
 
 <main>
   <section class="kpis">
-    <div class="kpi"><b id="kOk">0</b><span>Files converted</span></div>
-    <div class="kpi" id="kpiPending"><b id="kPending">0</b><span>Waiting in machine folder</span></div>
-    <div class="kpi queue"><b id="kQueue">0</b><span>Queued for delivery</span></div>
-    <div class="kpi alert"><b id="kBad">0</b><span>Failed · duplicates blocked</span></div>
-    <div class="kpi wide"><b id="kLast">—</b><span>Last file</span></div>
+    <div class="kpi tip" tabindex="0"><b id="kOk">0</b><span>Files converted</span></div>
+    <div class="kpi tip" id="kpiPending" tabindex="0"><b id="kPending">0</b><span>Waiting in machine folder</span></div>
+    <div class="kpi queue tip" tabindex="0"><b id="kQueue">0</b><span>Queued for delivery</span></div>
+    <div class="kpi alert tip" tabindex="0"><b id="kBad">0</b><span>Failed · duplicates blocked</span></div>
+    <div class="kpi wide tip" tabindex="0"><b id="kLast">—</b><span>Last file</span></div>
   </section>
 
   <nav class="tabs">
@@ -244,6 +257,15 @@ dialog::backdrop{background:#0008}
 </main>
 
 <dialog id="appearanceDlg"><div class="dlg-h">Appearance</div><div style="padding:18px"><div class="row"><label class="l">Theme</label><select id="themeSelect"><option value="system">Use system setting</option><option value="light">Light</option><option value="dark">Dark</option><option value="contrast">High contrast</option></select><span></span></div><div class="row"><label class="l">Text size</label><select id="fontSelect"><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option><option value="xlarge">Extra large</option></select><span></span></div><p class="hint" style="margin:14px 0 0">These preferences stay on this computer and do not change the machine or MES profile.</p></div><div class="dlg-f"><span class="spacer"></span><button class="btn primary" id="appearanceDone">Done</button></div></dialog>
+<dialog id="guideDlg" aria-labelledby="guideTitle"><div class="dlg-h" id="guideTitle">User Guide</div><p class="hint" style="padding:12px 18px;margin:0">Follow these steps to connect machine files to your customer's MES.</p><ol class="guide-steps">
+  <li><b>Setup</b><span>Enter the machine, backup, and output folders, then choose data and delivery options.</span></li>
+  <li><b>Integration Check</b><span>Run the check to confirm folders, sample data, and delivery paths are ready.</span></li>
+  <li><b>Start Watching</b><span>Start automatic pickup, or use Run once to process files on demand.</span></li>
+  <li><b>Preview &amp; Test</b><span>Load a sample or machine file to inspect detected tables and output.</span></li>
+  <li><b>History / Live Log</b><span>Review delivery results in History and current activity in Live Log.</span></li>
+  <li><b>Customer MES</b><span>Check the customer system or shared folder for delivered files.</span></li>
+  <li><b>Outage Recovery</b><span>When a destination returns, queued files are retried automatically.</span></li>
+</ol><div class="dlg-f"><span class="spacer"></span><button class="btn primary" id="guideDone">Done</button></div></dialog>
 <dialog id="dlg"><div class="dlg-h" id="dlgPath"></div><div class="dlg-b" id="dlgList"></div>
   <div class="dlg-f"><button class="btn" id="dlgUp">Up one level</button><span class="spacer"></span><button class="btn" id="dlgCancel">Cancel</button><button class="btn primary" id="dlgOk">Use this folder</button></div></dialog>
 
@@ -256,6 +278,66 @@ const api = async (p, body) => {
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const TEXT = ["station_name","input_folder","file_pattern","backup_folder","output_folder","shared_folder","api_url","api_token"];
 let cfg = {}, fmt = "json", logSince = 0, lastCsv = null;
+
+function addTip(el, text){
+  el.classList.add("tip"); el.dataset.tip = text; el.title = text;
+}
+
+const controlTips = {
+  btnOnce: "Process files already in the machine folder one time.",
+  btnStart: "Begin checking the machine folder for new files.",
+  btnStop: "Stop automatic checking.",
+  btnAppearance: "Change colors and text size.",
+  btnGuide: "Open a short guide to the LineBridge workflow.",
+  btnIntegration: "Check the folders, sample parser, and enabled delivery paths.",
+  btnSave: "Save the current settings for this LineBridge profile.",
+  btnSample: "Load the bundled example file into Preview & test.",
+  testShared: "Write and remove a small test file to check folder access.",
+  testApi: "Send a small test payload to the configured API link.",
+  appearanceDone: "Apply appearance preferences and close this dialog.",
+  guideDone: "Close the User Guide.",
+  dlgUp: "Move to the parent folder.", dlgCancel: "Close without choosing a folder.",
+  dlgOk: "Use the displayed folder path."
+};
+Object.entries(controlTips).forEach(([id,text]) => addTip($("#"+id),text));
+const tabTips = {
+  setup: "Set folders, output, selected data, and delivery destinations.",
+  preview: "Inspect a sample or machine file and its converted output.",
+  history: "Review processed files and their delivery outcomes.",
+  log: "See recent LineBridge activity and messages."
+};
+$$("nav.tabs button").forEach(b => addTip(b,tabTips[b.dataset.tab]));
+const metricTips = [
+  "Files successfully converted and recorded.",
+  "Matching files currently waiting in the machine folder.",
+  "Files waiting for an unavailable delivery destination.",
+  "Failed files and duplicate copies blocked, respectively.",
+  "Most recently processed file and its processing time."
+];
+$(".kpis").querySelectorAll(".kpi").forEach((el,i) => addTip(el,metricTips[i]));
+const fieldTips = {
+  station_name: "A readable name included with output and delivery records.",
+  input_folder: "Folder where the machine writes its CSV log files.",
+  file_pattern: "Filename pattern to watch, commonly *.csv.",
+  backup_folder: "Original files are archived here after processing.",
+  output_folder: "Converted files are written here before delivery.",
+  csv_layout: "Sections keeps each table separate; Flat combines records into rows.",
+  shared_enabled: "Enable delivery by copying files to a shared folder.",
+  shared_folder: "Customer or network folder that receives converted files.",
+  api_enabled: "Enable delivery to the customer's API endpoint.",
+  api_url: "Customer-provided web address that accepts the converted file.",
+  api_token: "Optional access token supplied by the customer.",
+  api_body: "Choose how the converted file is packaged in the API request.",
+  themeSelect: "Choose system appearance or a specific color theme.",
+  fontSelect: "Adjust the panel text size."
+};
+Object.entries(fieldTips).forEach(([id,text]) => {
+  const field = $("#"+id); if (!field) return;
+  addTip(field.closest(".row") || field.closest(".dest") || field,text);
+  field.title = text;
+});
+$$("[data-browse]").forEach(b => addTip(b,"Choose a folder for this setting."));
+$$("#fmtSeg button").forEach(b => addTip(b,`Use ${b.textContent} for converted output.`));
 
 // ---------- local operator preferences
 let appearance = {theme: "system", font: "medium"};
@@ -273,6 +355,9 @@ for (let i = 0; i < 10; i++) $("#selGrid").insertAdjacentHTML("beforeend",
 for (let i = 0; i < 2; i++) $("#manualGrid").insertAdjacentHTML("beforeend",
   `<div><div class="row" style="grid-template-columns:110px 1fr"><label class="l">Input ${i+1} name</label><input type="text" class="mlabel" placeholder="${i?'Shift':'Operator'}"></div>
    <div class="row" style="grid-template-columns:110px 1fr"><label class="l">Value</label><input type="text" class="mvalue"></div></div>`);
+$('.sel') && $$('.sel').forEach((el,i) => addTip(el.parentElement,`Choose table ${i+1} by name or enter an Excel-style cell range. Leave all empty to include every table.`));
+$$('.mlabel').forEach(el => addTip(el.closest('.row'),"Name for an operator-entered value included in every output."));
+$$('.mvalue').forEach(el => addTip(el.closest('.row'),"Operator-entered value included in every output."));
 
 // ---------- config <-> form
 function fill(c){
@@ -329,6 +414,8 @@ $("#appearanceDone").onclick = () => {
   appearance = {theme:$("#themeSelect").value, font:$("#fontSelect").value};
   applyAppearance(); $("#appearanceDlg").close();
 };
+$("#btnGuide").onclick = () => $("#guideDlg").showModal();
+$("#guideDone").onclick = () => $("#guideDlg").close();
 
 // ---------- tabs
 $$("nav.tabs button").forEach(b => b.onclick = () => {
@@ -377,8 +464,8 @@ $("#btnSample").onclick = async () => {
 async function refreshPreview(){
   if (!lastCsv) return;
   const r = await api("/api/preview", {...lastCsv, config: collect()});
-  $("#tlist").innerHTML = r.tables.map(t => `<div class="titem ${r.chosen.includes(t.name)?"chosen":""}">
-      <b>${esc(t.name)}</b><button class="btn sm" data-add="${esc(t.name)}">${r.chosen.includes(t.name)?"Selected":"Add"}</button>
+    $("#tlist").innerHTML = r.tables.map(t => `<div class="titem ${r.chosen.includes(t.name)?"chosen":""}">
+      <b>${esc(t.name)}</b><button class="btn sm" data-add="${esc(t.name)}" title="Add this table to the next free selection box.">${r.chosen.includes(t.name)?"Selected":"Add"}</button>
       <small>${esc(t.range)} · ${t.row_count} row${t.row_count===1?'':'s'} · ${t.columns.length} cols</small>
       <small>${esc(t.columns.join(", "))}</small></div>`).join("") || `<div class="empty">No tables detected</div>`;
   $$("[data-add]").forEach(b => b.onclick = () => {
@@ -391,7 +478,7 @@ async function refreshPreview(){
 }
 
 // ---------- status polling
-const badge = s => `<span class="badge ${esc((s||"").split(" ")[0])}">${esc(s || "—")}</span>`;
+  const badge = s => `<span class="badge tip ${esc((s||"").split(" ")[0])}" tabindex="0" data-tip="Delivery status: ${esc(s || "not available")}" title="Delivery status: ${esc(s || "not available")}">${esc(s || "—")}</span>`;
 async function poll(){
   let s; try { s = await api("/api/status?since=" + logSince); } catch { return; }
   $("#pill").classList.toggle("on", s.running); $("#pill span").textContent = s.running ? "Watching" : "Stopped";
