@@ -5,5 +5,11 @@ demo/workspace/
 input/
 output/
 backup/
+real_machine_logs/backup/
+real_machine_logs/output/
+real_machine_logs/*.db
 *.zip
 *.DS_Store
+.video_deps/
+demo/video_workspace/
+demo/video_output/LineBridge_real_data_demo.mp4

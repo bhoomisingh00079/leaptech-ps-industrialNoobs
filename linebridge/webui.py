@@ -231,6 +231,33 @@ def list_dirs(path):
     return {"path": str(p.resolve()), "parent": str(p.resolve().parent), "dirs": dirs[:500]}
 
 
+def list_outputs(cfg):
+    """List only finished output documents in the configured output folder."""
+    folder = Path(cfg["output_folder"])
+    if not folder.is_dir():
+        return []
+    root = folder.resolve()
+    files = (p for p in folder.iterdir() if p.is_file() and p.suffix.lower() in (".json", ".csv", ".txt")
+             and not p.name.startswith(".") and p.resolve().parent == root)
+    return [{"name": p.name, "format": p.suffix[1:].lower(), "size": p.stat().st_size,
+             "modified": datetime.fromtimestamp(p.stat().st_mtime).isoformat(timespec="seconds")}
+            for p in sorted(files, key=lambda p: p.stat().st_mtime, reverse=True)]
+
+
+def read_output(cfg, name):
+    """Read one finished document; never accept a path outside the output folder."""
+    if not name or name.startswith(".") or "/" in name or "\\" in name or Path(name).suffix.lower() not in (".json", ".csv", ".txt"):
+        raise ValueError("Invalid output filename")
+    folder = Path(cfg["output_folder"])
+    target = folder / name
+    if not target.is_file() or target.resolve().parent != folder.resolve():
+        raise FileNotFoundError("Output file not found")
+    if target.stat().st_size > 10 * 1024 * 1024:
+        raise ValueError("Output file is too large to preview (10 MB limit)")
+    return {"name": name, "format": target.suffix[1:].lower(),
+            "content": target.read_text(encoding="utf-8")}
+
+
 def make_handler(ctl):
     class H(BaseHTTPRequestHandler):
         server_version = f"LineBridge/{core.__version__}"
@@ -267,6 +294,15 @@ def make_handler(ctl):
                 if not sample.exists():
                     return self._send(404, {"error": "Bundled sample is missing"})
                 return self._send(200, {"name": sample.name, "csv": sample.read_text(encoding="utf-8")})
+            if u.path == "/api/outputs":
+                return self._send(200, {"files": list_outputs(ctl.cfg)})
+            if u.path == "/api/output":
+                try:
+                    return self._send(200, read_output(ctl.cfg, q.get("name", [""])[0]))
+                except FileNotFoundError as e:
+                    return self._send(404, {"error": str(e)})
+                except (ValueError, UnicodeError) as e:
+                    return self._send(400, {"error": str(e)})
             self._send(404, {"error": "not found"})
 
         def do_POST(self):

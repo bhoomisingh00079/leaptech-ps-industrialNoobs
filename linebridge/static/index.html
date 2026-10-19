@@ -110,6 +110,22 @@ table.hist{width:100%;border-collapse:collapse;font-size:13px}
 #log{height:520px;max-height:none}
 .lv-WARNING{color:var(--warn)} .lv-ERROR{color:var(--bad)}
 .empty{color:var(--muted);text-align:center;padding:30px}
+.output-layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:14px;align-items:start}
+.output-list{max-height:640px;overflow:auto;display:grid;gap:5px}
+.output-file{width:100%;text-align:left;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:9px;cursor:pointer;overflow-wrap:anywhere}
+.output-file:hover,.output-file.active{border-color:var(--accent);background:var(--accent-soft)}
+.output-file small{display:block;color:var(--muted);margin-top:3px}
+.output-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}
+.output-tools select{width:auto;max-width:260px}
+.output-tools input{max-width:220px}
+.output-meta{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.output-meta span{border:1px solid var(--line);background:var(--soft);padding:5px 8px;border-radius:7px;font-size:12px;overflow-wrap:anywhere}
+.output-table{overflow:auto;max-height:580px;border:1px solid var(--line);border-radius:8px}
+.output-table table{border-collapse:collapse;font:12px var(--mono);white-space:nowrap}
+.output-table th,.output-table td{padding:7px 9px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);max-width:300px;overflow:hidden;text-overflow:ellipsis}
+.output-table th{position:sticky;top:0;background:var(--soft);z-index:1;text-align:left}
+.output-table td:empty{background:var(--soft)}
+.output-page{display:flex;align-items:center;gap:10px;margin-top:10px}
 dialog{border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);width:min(560px,94vw);padding:0}
 dialog::backdrop{background:#0008}
 .dlg-h{padding:14px 18px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:12.5px;word-break:break-all}
@@ -120,7 +136,7 @@ dialog::backdrop{background:#0008}
 .checklist{display:grid;gap:8px;margin-top:12px}.checkrow{display:grid;grid-template-columns:28px 190px 1fr;gap:10px;align-items:start;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--soft)}.checkrow b{font-size:13px}.checkrow small{color:var(--muted);overflow-wrap:anywhere}.checkrow.ok .checkicon{color:var(--ok)}.checkrow.bad .checkicon{color:var(--bad)}.checkrow.skipped .checkicon{color:var(--muted)}.checkicon{font-size:18px;font-weight:700;line-height:1}.demo-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.demo-step{border:1px solid var(--line);border-radius:9px;padding:11px;background:var(--soft)}.demo-step b{display:block;color:var(--accent);margin-bottom:4px}.code{font-family:var(--mono);background:var(--soft);border:1px solid var(--line);padding:8px 10px;border-radius:7px;display:inline-block;user-select:all}
 @media (max-width:860px){
   .kpis{grid-template-columns:repeat(2,1fr)} .kpi.wide{grid-column:span 2}
-  .grid2,.split{grid-template-columns:1fr} .sel-grid{grid-template-columns:repeat(2,1fr)} .demo-steps{grid-template-columns:1fr} .checkrow{grid-template-columns:28px 1fr}.checkrow small{grid-column:2}
+  .grid2,.split,.output-layout{grid-template-columns:1fr} .sel-grid{grid-template-columns:repeat(2,1fr)} .demo-steps{grid-template-columns:1fr} .checkrow{grid-template-columns:28px 1fr}.checkrow small{grid-column:2}
   .row{grid-template-columns:1fr auto} .row label.l{grid-column:1/-1}
   header{padding:12px 16px} main{padding:16px}
 }
@@ -153,6 +169,7 @@ dialog::backdrop{background:#0008}
   <nav class="tabs">
     <button data-tab="setup" class="active">Setup</button>
     <button data-tab="preview">Preview &amp; test</button>
+    <button data-tab="outputs">Output viewer</button>
     <button data-tab="history">History</button>
     <button data-tab="log">Live log</button>
   </nav>
@@ -177,6 +194,7 @@ dialog::backdrop{background:#0008}
       <div class="row"><label class="l">Station name</label><input type="text" id="station_name"><span></span></div>
       <div class="row"><label class="l">Machine CSV folder</label><input type="text" id="input_folder"><button class="btn sm" data-browse="input_folder">Browse</button></div>
       <div class="row"><label class="l">File pattern</label><input type="text" id="file_pattern"><span></span></div>
+      <div class="row"><label class="l">Process first</label><input type="text" id="priority_patterns" placeholder="experiment_13.csv, secom_*.csv"><span></span></div>
       <div class="row"><label class="l">Back-up folder</label><input type="text" id="backup_folder"><button class="btn sm" data-browse="backup_folder">Browse</button></div>
       <div class="row"><label class="l">Output folder</label><input type="text" id="output_folder"><button class="btn sm" data-browse="output_folder">Browse</button></div>
     </div>
@@ -244,6 +262,16 @@ dialog::backdrop{background:#0008}
     </div>
   </section>
 
+  <!-- ============ SAVED OUTPUTS ============ -->
+  <section class="tab" id="tab-outputs">
+    <div class="output-layout">
+      <div class="card"><h3>Saved output files</h3><p class="hint">Files in the configured output folder.</p><button class="btn sm" id="refreshOutputs">Refresh list</button><div class="output-list" id="outputList" style="margin-top:12px"><div class="empty">Loading…</div></div></div>
+      <div class="card"><h3 id="outputTitle">Select a file</h3><p class="hint" id="outputInfo">JSON and CSV display as tables; TXT displays as a formatted report.</p>
+        <div id="outputBody"><div class="empty">Choose a saved file to preview it here.</div></div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ HISTORY ============ -->
   <section class="tab" id="tab-history">
     <div class="card scroll">
@@ -262,6 +290,7 @@ dialog::backdrop{background:#0008}
   <li><b>Integration Check</b><span>Run the check to confirm folders, sample data, and delivery paths are ready.</span></li>
   <li><b>Start Watching</b><span>Start automatic pickup, or use Run once to process files on demand.</span></li>
   <li><b>Preview &amp; Test</b><span>Load a sample or machine file to inspect detected tables and output.</span></li>
+  <li><b>Output viewer</b><span>Open saved JSON, CSV, and TXT files inside the panel.</span></li>
   <li><b>History / Live Log</b><span>Review delivery results in History and current activity in Live Log.</span></li>
   <li><b>Customer MES</b><span>Check the customer system or shared folder for delivered files.</span></li>
   <li><b>Outage Recovery</b><span>When a destination returns, queued files are retried automatically.</span></li>
@@ -303,6 +332,7 @@ Object.entries(controlTips).forEach(([id,text]) => addTip($("#"+id),text));
 const tabTips = {
   setup: "Set folders, output, selected data, and delivery destinations.",
   preview: "Inspect a sample or machine file and its converted output.",
+  outputs: "Browse and read saved JSON, CSV, and TXT outputs.",
   history: "Review processed files and their delivery outcomes.",
   log: "See recent LineBridge activity and messages."
 };
@@ -319,6 +349,7 @@ const fieldTips = {
   station_name: "A readable name included with output and delivery records.",
   input_folder: "Folder where the machine writes its CSV log files.",
   file_pattern: "Filename pattern to watch, commonly *.csv.",
+  priority_patterns: "Optional filename patterns processed first, in the order listed. Separate patterns with commas.",
   backup_folder: "Original files are archived here after processing.",
   output_folder: "Converted files are written here before delivery.",
   csv_layout: "Sections keeps each table separate; Flat combines records into rows.",
@@ -362,6 +393,7 @@ $$('.mvalue').forEach(el => addTip(el.closest('.row'),"Operator-entered value in
 // ---------- config <-> form
 function fill(c){
   cfg = c; TEXT.forEach(k => $("#"+k).value = c[k] ?? "");
+  $("#priority_patterns").value = (c.priority_patterns || []).join(", ");
   $$(".sel").forEach((el,i) => el.value = c.selections[i] || "");
   $$(".mlabel").forEach((el,i) => el.value = c.manual_inputs[i].label);
   $$(".mvalue").forEach((el,i) => el.value = c.manual_inputs[i].value);
@@ -371,6 +403,7 @@ function fill(c){
 }
 function collect(){
   const c = {...cfg}; TEXT.forEach(k => c[k] = $("#"+k).value.trim());
+  c.priority_patterns = $("#priority_patterns").value.split(",").map(s => s.trim()).filter(Boolean);
   c.selections = $$(".sel").map(e => e.value.trim());
   c.manual_inputs = $$(".mlabel").map((e,i) => ({label:e.value.trim(), value:$$(".mvalue")[i].value}));
   c.shared_enabled = $("#shared_enabled").checked; c.api_enabled = $("#api_enabled").checked;
@@ -421,6 +454,7 @@ $("#guideDone").onclick = () => $("#guideDlg").close();
 $$("nav.tabs button").forEach(b => b.onclick = () => {
   $$("nav.tabs button").forEach(x => x.classList.toggle("active", x===b));
   $$(".tab").forEach(t => t.classList.toggle("active", t.id === "tab-"+b.dataset.tab));
+  if (b.dataset.tab === "outputs") refreshOutputs();
 });
 
 // ---------- run control
@@ -477,6 +511,97 @@ async function refreshPreview(){
   $("#pvFmt").textContent = r.format.toUpperCase() + (r.chosen.length ? ` · ${r.chosen.length} block(s)` : "");
 }
 
+// ---------- saved output viewer
+let savedOutput = null, outputBlocks = [], outputMeta = {}, outputBlock = 0, outputPage = 0;
+const PAGE_SIZE = 20;
+const sizeText = n => n < 1024 ? `${n} B` : n < 1048576 ? `${(n/1024).toFixed(1)} KB` : `${(n/1048576).toFixed(1)} MB`;
+async function refreshOutputs(){
+  const list = $("#outputList");
+  try {
+    const r = await api("/api/outputs");
+    list.innerHTML = r.files.map(f => `<button class="output-file ${savedOutput?.name===f.name?'active':''}" data-output="${esc(f.name)}"><b>${esc(f.name)}</b><small>${esc(f.format.toUpperCase())} · ${sizeText(f.size)} · ${esc(f.modified.replace('T',' '))}</small></button>`).join("") || '<div class="empty">No saved outputs yet.</div>';
+    list.querySelectorAll('[data-output]').forEach(b => b.onclick = () => openOutput(b.dataset.output));
+  } catch(e) { list.innerHTML = `<div class="result bad">${esc(e.message)}</div>`; }
+}
+function parseOutputCsv(content){
+  const rows = []; let row = [], cell = '', quoted = false;
+  for (let i=0; i<content.length; i++) {
+    const c = content[i];
+    if (c === '"') { if (quoted && content[i+1] === '"') { cell += '"'; i++; } else quoted = !quoted; }
+    else if (c === ',' && !quoted) { row.push(cell); cell = ''; }
+    else if ((c === '\n' || c === '\r') && !quoted) { if (c === '\r' && content[i+1] === '\n') i++; row.push(cell); rows.push(row); row=[]; cell=''; }
+    else cell += c;
+  }
+  if (quoted) throw new Error('CSV has an unfinished quoted field');
+  if (row.length || cell) { row.push(cell); rows.push(row); }
+  return rows;
+}
+function csvBlocks(content){
+  const rows = parseOutputCsv(content);
+  if (!rows[0]?.[0]?.startsWith('#')) return {meta:{}, blocks:[{name:'Rows', columns:rows[0] || [], rows:rows.slice(1)}]};
+  const meta = {}, blocks = []; let block = null;
+  for (const row of rows) {
+    if (!row.some(Boolean)) continue;
+    if (row[0].startsWith('#') && !block) { meta[row[0].slice(1)] = row.slice(1).join(', '); continue; }
+    if (row.length === 1 && /^\[.*\]$/.test(row[0])) { block = {name:row[0].slice(1,-1), columns:null, rows:[]}; blocks.push(block); continue; }
+    if (block) { if (!block.columns) block.columns = row; else block.rows.push(row); }
+  }
+  return {meta, blocks};
+}
+async function openOutput(name){
+  $("#outputTitle").textContent = name;
+  $("#outputBody").innerHTML = '<div class="empty">Loading file…</div>';
+  try {
+    savedOutput = await api('/api/output?name=' + encodeURIComponent(name));
+    outputBlock = 0; outputPage = 0; outputMeta = {}; outputBlocks = [];
+    if (savedOutput.format === 'json') {
+      const doc = JSON.parse(savedOutput.content);
+      outputMeta = Object.fromEntries(Object.entries(doc).filter(([k]) => k !== 'tables'));
+      outputBlocks = Object.entries(doc.tables || {}).map(([name,t]) => ({name, range:t.range, columns:t.columns || [], rows:t.rows || []}));
+    } else if (savedOutput.format === 'csv') {
+      const parsed = csvBlocks(savedOutput.content);
+      outputMeta = parsed.meta; outputBlocks = parsed.blocks;
+    }
+    $("#outputInfo").textContent = `${savedOutput.format.toUpperCase()} · ${sizeText(new Blob([savedOutput.content]).size)} · ${outputBlocks.length || 1} section(s)`;
+    renderSavedOutput(); refreshOutputs();
+  } catch(e) {
+    $("#outputBody").innerHTML = `<div class="result bad">Could not open file: ${esc(e.message)}</div>`;
+  }
+}
+function renderSavedOutput(){
+  const body = $("#outputBody");
+  const meta = Object.entries(outputMeta).map(([k,v]) => `<span><b>${esc(k.replaceAll('_',' '))}:</b> ${esc(typeof v === 'object' ? JSON.stringify(v) : v)}</span>`).join('');
+  body.innerHTML = (meta ? `<div class="output-meta">${meta}</div>` : '') +
+    (savedOutput.format === 'txt' ? `<pre>${esc(savedOutput.content)}</pre>` :
+     `<div class="output-tools"><label>Section <select id="outputSection">${outputBlocks.map((b,i) => `<option value="${i}" ${i===outputBlock?'selected':''}>${esc(b.name)} (${b.rows.length} rows)</option>`).join('')}</select></label><input type="text" id="outputColumns" placeholder="Filter columns" aria-label="Filter columns"><label><input type="checkbox" id="outputRaw"> Raw text</label></div><div id="outputData"></div>`);
+  if (savedOutput.format === 'txt') return;
+  $('#outputSection').onchange = e => { outputBlock = Number(e.target.value); outputPage = 0; renderOutputTable(); };
+  $('#outputColumns').oninput = () => { outputPage = 0; renderOutputTable(); };
+  $('#outputRaw').onchange = renderOutputTable;
+  renderOutputTable();
+}
+function renderOutputTable(){
+  const target = $('#outputData');
+  if ($('#outputRaw').checked) { target.innerHTML = `<pre>${esc(savedOutput.content)}</pre>`; return; }
+  const block = outputBlocks[outputBlock];
+  if (!block) { target.innerHTML = '<div class="empty">No table rows in this file.</div>'; return; }
+  const query = $('#outputColumns').value.trim().toLowerCase();
+  const cols = block.columns.map((name,i) => ({name,i})).filter(c => c.name.toLowerCase().includes(query));
+  if (!cols.length) { target.innerHTML = '<div class="empty">No columns match the filter.</div>'; return; }
+  const total = block.rows.length, pages = Math.max(1,Math.ceil(total/PAGE_SIZE));
+  outputPage = Math.min(outputPage,pages-1);
+  const pageRows = block.rows.slice(outputPage*PAGE_SIZE,(outputPage+1)*PAGE_SIZE);
+  const cells = pageRows.map(row => `<tr>${cols.map(c => `<td title="${esc(Array.isArray(row)?row[c.i]:row[c.name])}">${esc(Array.isArray(row)?row[c.i]:row[c.name])}</td>`).join('')}</tr>`).join('');
+  target.innerHTML = `<p class="hint">${esc(block.name)}${block.range ? ' · '+esc(block.range) : ''} · ${total} rows · ${cols.length} of ${block.columns.length} columns</p><div class="output-table"><table><thead><tr>${cols.map(c => `<th>${esc(c.name)}</th>`).join('')}</tr></thead><tbody>${cells}</tbody></table></div><div class="output-page"><button class="btn sm" id="outputPrev" ${outputPage===0?'disabled':''}>Previous</button><span>Page ${outputPage+1} of ${pages}</span><button class="btn sm" id="outputNext" ${outputPage===pages-1?'disabled':''}>Next</button></div>`;
+  $('#outputPrev').onclick = () => { outputPage--; renderOutputTable(); };
+  $('#outputNext').onclick = () => { outputPage++; renderOutputTable(); };
+}
+$('#refreshOutputs').onclick = refreshOutputs;
+$('#hist').onclick = e => {
+  const button = e.target.closest('[data-output]'); if (!button) return;
+  $('nav.tabs button[data-tab="outputs"]').click(); openOutput(button.dataset.output);
+};
+
 // ---------- status polling
   const badge = s => `<span class="badge tip ${esc((s||"").split(" ")[0])}" tabindex="0" data-tip="Delivery status: ${esc(s || "not available")}" title="Delivery status: ${esc(s || "not available")}">${esc(s || "—")}</span>`;
 async function poll(){
@@ -488,7 +613,7 @@ async function poll(){
   $("#kBad").textContent = `${s.stats.failed} · ${s.stats.duplicate}`;
   $("#kLast").textContent = s.stats.last ? `${s.stats.last[1]}  (${s.stats.last[0].slice(11)})` : "—";
   $("#hist").innerHTML = s.history.map(h => `<tr><td>${esc((h.processed_at||"").replace("T"," "))}</td><td class="m">${esc(h.source)}</td>
-    <td>${badge(h.status)}</td><td class="m">${esc(h.tables)}</td><td class="m">${esc(h.output)}</td>
+    <td>${badge(h.status)}</td><td class="m">${esc(h.tables)}</td><td class="m">${h.output ? `<button class="btn sm" data-output="${esc(h.output)}">${esc(h.output)}</button>` : '—'}</td>
     <td>${badge(h.shared)}</td><td>${badge(h.api)}</td><td class="m" title="${esc(h.sha256)}">${esc((h.sha256||"").slice(0,10))}</td><td>${esc(h.message)}</td></tr>`).join("")
     || `<tr><td colspan="9" class="empty">No files processed yet</td></tr>`;
   if (s.logs.length){

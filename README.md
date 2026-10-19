@@ -80,6 +80,14 @@ LineBridge makes the existing CSV the integration point. If the machine can writ
 
 ## 4. Quick start
 
+### Supplied SECOM data
+
+The supplied semiconductor sensor records are kept in [`real_machine_logs/`](real_machine_logs/README.md), with a ready profile in `config.secom.json`. On Windows, run `start_panel.bat` and press **Start watching** to process waiting CSV files. The app archives each batch after conversion, so the input folder empties as processing completes. The SECOM dataset is a historical collection of production entities, rather than continuously arriving machine logs.
+
+The same folder now also accepts `experiment_13.csv`, a 2,233-row CNC machining log. The profile watches all CSV files and gives the experiment priority over any waiting SECOM batches.
+
+Open the **Output viewer** tab to browse finished JSON, CSV, and TXT files in the configured output folder. JSON and CSV display as pageable tables with a column filter; TXT displays as a formatted report. Output names in **History** open the same viewer.
+
 **Requirements:** Python 3.9 or newer. No packages to install, no internet needed.
 
 ```bash

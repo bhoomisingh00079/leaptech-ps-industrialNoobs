@@ -40,6 +40,7 @@ DEFAULT_CONFIG = {
     "station_name": "SMT Line 1",
     "input_folder": "./input",            # where the machine drops its CSV logs
     "file_pattern": "*.csv",
+    "priority_patterns": [],              # optional glob patterns processed before other files, in order
     "backup_folder": "./backup",          # used source files are archived here (dated sub-folders)
     "output_folder": "./output",          # generated files are written here first
     "output_format": "json",              # json | csv | txt
@@ -74,6 +75,7 @@ def load_config(path):
 def normalize_config(cfg):
     base = json.loads(json.dumps(DEFAULT_CONFIG))
     base.update(cfg or {})
+    base["priority_patterns"] = [str(p).strip() for p in base.get("priority_patterns", []) if str(p).strip()]
     base["selections"] = [str(s or "").strip() for s in (list(base["selections"]) + [""] * MAX_SELECTIONS)][:MAX_SELECTIONS]
     mi = [m for m in base["manual_inputs"] if isinstance(m, dict)] + [{"label": "", "value": ""}] * MAX_MANUAL
     base["manual_inputs"] = [{"label": str(m.get("label", "")), "value": str(m.get("value", ""))} for m in mi[:MAX_MANUAL]]
@@ -561,7 +563,11 @@ class Engine:
         now = time.time()
         files = [f for f in inp.glob(self.cfg["file_pattern"]) if f.is_file() and not f.name.startswith(".")]
         files = [f for f in files if now - f.stat().st_mtime >= self.cfg["stable_seconds"]]
-        return sorted(files, key=lambda p: (p.stat().st_mtime, p.name))
+        priority = self.cfg["priority_patterns"]
+        def order(p):
+            rank = next((i for i, pattern in enumerate(priority) if fnmatch.fnmatch(p.name, pattern)), len(priority))
+            return rank, p.stat().st_mtime, p.name
+        return sorted(files, key=order)
 
     def scan_once(self):
         self.retry_outbox()

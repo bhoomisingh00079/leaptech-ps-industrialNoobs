@@ -1,0 +1,23 @@
+{
+  "station_name": "Real machine logs",
+  "input_folder": "./real_machine_logs/incoming",
+  "file_pattern": "*.csv",
+  "priority_patterns": ["experiment_13.csv", "secom_*.csv"],
+  "backup_folder": "./real_machine_logs/backup",
+  "output_folder": "./real_machine_logs/output",
+  "output_format": "json",
+  "csv_layout": "sections",
+  "selections": ["", "", "", "", "", "", "", "", "", ""],
+  "manual_inputs": [{"label": "", "value": ""}, {"label": "", "value": ""}],
+  "shared_enabled": false,
+  "shared_folder": "",
+  "api_enabled": false,
+  "api_url": "",
+  "api_token": "",
+  "api_body": "raw",
+  "api_timeout": 20,
+  "skip_duplicates": true,
+  "poll_seconds": 3,
+  "stable_seconds": 2,
+  "ledger_path": "./real_machine_logs/linebridge_ledger.db"
+}
