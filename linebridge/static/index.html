@@ -254,7 +254,13 @@ dialog::backdrop{background:#0008}
     <div class="card">
       <h3>Try it on a real machine file</h3>
       <p class="hint">Drop one CSV here. You will see every table LineBridge finds, with its cell range, and the exact file it would send using the current setup (saved or not).</p>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label class="drop" id="drop" style="flex:1"><input type="file" id="file" accept=".csv,.txt,.log" hidden><span id="dropTxt">Drop a CSV file or click to choose</span></label><button class="btn" id="btnSample">Load bundled sample</button></div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label class="drop" id="drop" style="flex:1"><input type="file" id="file" accept=".csv,.txt,.log,.json" hidden><span id="dropTxt">Drop a CSV, text log, or JSON file, or click to choose</span></label><button class="btn" id="btnSample">Load bundled sample</button></div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px">
+        <label class="l" style="font-weight:600">Output format</label>
+        <div class="seg" id="uploadFmtSeg"><button type="button" data-v="json" class="on">JSON</button><button type="button" data-v="csv">CSV</button><button type="button" data-v="txt">TXT</button></div>
+        <button class="btn primary" id="btnProcessUpload" disabled>Process &amp; Download</button>
+        <span id="uploadMsg" class="result"></span>
+      </div>
     </div>
     <div class="split">
       <div class="card"><h3>Tables found</h3><p class="hint">Click Add to put a table into the next free selection box.</p><div class="tlist" id="tlist"><div class="empty">No file loaded</div></div></div>
@@ -266,7 +272,7 @@ dialog::backdrop{background:#0008}
   <section class="tab" id="tab-outputs">
     <div class="output-layout">
       <div class="card"><h3>Saved output files</h3><p class="hint">Files in the configured output folder.</p><button class="btn sm" id="refreshOutputs">Refresh list</button><div class="output-list" id="outputList" style="margin-top:12px"><div class="empty">Loading…</div></div></div>
-      <div class="card"><h3 id="outputTitle">Select a file</h3><p class="hint" id="outputInfo">JSON and CSV display as tables; TXT displays as a formatted report.</p>
+      <div class="card"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h3 id="outputTitle" style="margin:0">Select a file</h3><button class="btn sm" id="btnDownloadCurrent" style="margin-left:auto;display:none">Download</button></div><p class="hint" id="outputInfo">JSON and CSV display as tables; TXT displays as a formatted report.</p>
         <div id="outputBody"><div class="empty">Choose a saved file to preview it here.</div></div>
       </div>
     </div>
@@ -326,9 +332,11 @@ const controlTips = {
   appearanceDone: "Apply appearance preferences and close this dialog.",
   guideDone: "Close the User Guide.",
   dlgUp: "Move to the parent folder.", dlgCancel: "Close without choosing a folder.",
-  dlgOk: "Use the displayed folder path."
+  dlgOk: "Use the displayed folder path.",
+  btnProcessUpload: "Process the uploaded file through LineBridge and download the converted output.",
+  btnDownloadCurrent: "Download the selected output document."
 };
-Object.entries(controlTips).forEach(([id,text]) => addTip($("#"+id),text));
+Object.entries(controlTips).forEach(([id,text]) => { const el = $("#"+id); if (el) addTip(el, text); });
 const tabTips = {
   setup: "Set folders, output, selected data, and delivery destinations.",
   preview: "Inspect a sample or machine file and its converted output.",
@@ -490,10 +498,56 @@ const drop = $("#drop");
 ["dragleave","drop"].forEach(ev => drop.addEventListener(ev, () => drop.classList.remove("hover")));
 drop.addEventListener("drop", e => { e.preventDefault(); if (e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); });
 $("#file").onchange = e => e.target.files[0] && load(e.target.files[0]);
-async function load(f){ lastCsv = {name:f.name, csv: await f.text()}; $("#dropTxt").textContent = "Loaded: " + f.name + " — drop another to replace"; refreshPreview(); }
+async function load(f){
+  lastCsv = {name:f.name, csv: await f.text()};
+  $("#dropTxt").textContent = "Loaded: " + f.name + " — drop another to replace";
+  $("#btnProcessUpload").disabled = false;
+  $("#uploadMsg").textContent = "";
+  refreshPreview();
+}
 $("#btnSample").onclick = async () => {
   const s = await api("/api/sample"); lastCsv = s;
-  $("#dropTxt").textContent = "Loaded bundled sample: " + s.name; refreshPreview();
+  $("#dropTxt").textContent = "Loaded bundled sample: " + s.name;
+  $("#btnProcessUpload").disabled = false;
+  $("#uploadMsg").textContent = "";
+  refreshPreview();
+};
+let uploadFmt = "json";
+$$("#uploadFmtSeg button").forEach(b => b.onclick = () => {
+  uploadFmt = b.dataset.v;
+  $$("#uploadFmtSeg button").forEach(x => x.classList.toggle("on", x === b));
+  setFmt(uploadFmt);
+  refreshPreview();
+});
+$("#btnProcessUpload").onclick = async () => {
+  if (!lastCsv) return;
+  const msg = $("#uploadMsg");
+  msg.className = "result";
+  msg.textContent = "Processing…";
+  $("#btnProcessUpload").disabled = true;
+  try {
+    const res = await api("/api/upload", {
+      name: lastCsv.name,
+      csv: lastCsv.csv,
+      format: uploadFmt,
+      config: collect()
+    });
+    msg.className = "result ok";
+    msg.textContent = "Processed: " + res.output;
+    const a = document.createElement("a");
+    a.href = res.download_url;
+    a.download = res.output;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    refreshOutputs();
+    poll();
+  } catch(err) {
+    msg.className = "result bad";
+    msg.textContent = "Error: " + err.message;
+  } finally {
+    $("#btnProcessUpload").disabled = false;
+  }
 };
 async function refreshPreview(){
   if (!lastCsv) return;
@@ -563,6 +617,11 @@ async function openOutput(name){
       outputMeta = parsed.meta; outputBlocks = parsed.blocks;
     }
     $("#outputInfo").textContent = `${savedOutput.format.toUpperCase()} · ${sizeText(new Blob([savedOutput.content]).size)} · ${outputBlocks.length || 1} section(s)`;
+    const dlBtn = $("#btnDownloadCurrent");
+    if (dlBtn) {
+      dlBtn.style.display = "inline-block";
+      dlBtn.onclick = () => { window.location.href = '/api/download?name=' + encodeURIComponent(name); };
+    }
     renderSavedOutput(); refreshOutputs();
   } catch(e) {
     $("#outputBody").innerHTML = `<div class="result bad">Could not open file: ${esc(e.message)}</div>`;
