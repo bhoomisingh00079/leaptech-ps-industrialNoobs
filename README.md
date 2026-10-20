@@ -79,7 +79,7 @@ Watch the complete implementation and execution walkthrough, covering both the w
 [![Project Demo — Web & Desktop Applications]\(https\://img.youtube.com/vi/U8hpWJG6ORg/0.jpg)]\(https\://youtu.be/U8hpWJG6ORg)
 
 
-▶️ **[Watch the Full Demo on YouTube](https://youtu.be/U8hpWJG6ORg)**
+▶️ **[Watch the Full Demo on YouTube](https://youtu.be/UYU5B8hAyhs')**
 
 
 **### What the Demo Covers**
