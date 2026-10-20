@@ -15,7 +15,7 @@ from . import core
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(prog="linebridge", description="Machine CSV -> MES-ready JSON/CSV/TXT bridge")
+    ap = argparse.ArgumentParser(prog="linebridge", description="Machine CSV -> MES-ready JSON/CSV/TXT/PDF bridge")
     sub = ap.add_subparsers(dest="cmd")
     for name in ("ui", "run", "preview", "history"):
         sp = sub.add_parser(name)
@@ -54,7 +54,8 @@ def main(argv=None):
         for w in warnings:
             print("WARNING:", w)
         print(f"\nSelected: {', '.join(chosen) or 'nothing'}\n" + "-" * 60)
-        print(text)
+        print(f"PDF generated ({len(text)} bytes); use the configured output folder to retrieve it."
+              if isinstance(text, bytes) else text)
     elif a.cmd == "history":
         for r in core.Ledger(core.load_config(a.config)["ledger_path"]).recent(30):
             print(f"{r['processed_at']}  {r['status']:<9} {r['source']:<28} -> {r['output'] or '-':<36} "

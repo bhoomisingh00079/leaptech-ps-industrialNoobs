@@ -143,7 +143,7 @@ LineBridge makes the existing CSV the integration point. If the machine can writ
 
 \`\`\`
 
-&#x20;Machine writes CSV ─► LineBridge (on the machine PC) ─► MES-ready JSON / CSV / TXT
+&#x20;Machine writes CSV ─► LineBridge (on the machine PC) ─► MES-ready JSON / CSV / TXT / PDF
 
 &#x20;                        │  pick tables (up to 10)          ├─► shared folder (\\\MES\inbox)
 
@@ -165,7 +165,7 @@ LineBridge makes the existing CSV the integration point. If the machine can writ
 
 \| 2. Pull the files from the folder | Automatic pickup, or **\*\*Run once\*\*** on demand |
 
-\| 3. Extract particular tables into JSON, CSV or TXT | Table detection + 3 output formats (CSV in *\*sections\** or *\*flat\** layout) |
+\| 3. Extract particular tables into JSON, CSV, TXT or PDF | Table detection + 4 output formats (CSV in *\*sections\** or *\*flat\** layout) |
 
 \| 4. User picks the table, e.g. L1 x M8 | Pick by **\*\*table name\*\*** (\`L1xM8\`), **\*\*Excel-style cell range\*\*** (\`L1:M8\`), with optional **\*\*column filter\*\*** |
 
@@ -193,11 +193,11 @@ The same folder now also accepts \`experiment_13.csv\`, a 2,233-row CNC machinin
 
 
 
-Open the **\*\*Output viewer\*\*** tab to browse finished JSON, CSV, and TXT files in the configured output folder. JSON and CSV display as pageable tables with a column filter; TXT displays as a formatted report. Output names in **\*\*History\*\*** open the same viewer.
+Open the **\*\*Output viewer\*\*** tab to browse finished JSON, CSV, TXT, and PDF files in the configured output folder. JSON and CSV display as pageable tables with a column filter; TXT displays as a formatted report. Output names in **\*\*History\*\*** open the same viewer.
 
 
 
-**\*\*Requirements:\*\*** Python 3.9 or newer. No packages to install, no internet needed.
+**\*\*Requirements:\*\*** Python 3.9 or newer. No packages to install, no internet needed. PDF generation also uses only the standard library; no additional dependencies are required.
 
 
 
@@ -315,7 +315,7 @@ Step by step, for every file:
 
 5\. **\*\*Enrich.\*\*** The 2 manual inputs, station name, source file name, processing time and SHA-256 are added.
 
-6\. **\*\*Render.\*\*** The output is written as JSON, CSV or TXT using an **\*\*atomic write\*\*** (temp file then rename), so an MES polling the folder never sees a partial file.
+6\. **\*\*Render.\*\*** The output is written as JSON, CSV, TXT or PDF using an **\*\*atomic write\*\*** (temp file then rename), so an MES polling the folder never sees a partial file.
 
 7\. **\*\*Deliver.\*\*** The file is copied to the shared folder and/or POSTed to the API link. If a destination fails, the file goes into an **\*\*outbox\*\*** and is retried at the start of every cycle, in order.
 
@@ -416,6 +416,8 @@ Every output carries the same metadata: source file, processed time, station, SH
 **\*\*CSV, flat layout:\*\*** a single table, one row per record, with \`source_file, processed_at, table, \<manual inputs>, \<all columns>\`. This is the easiest layout for a database or MES import wizard.
 
 **\*\*TXT:\*\*** an aligned, human-readable report for printing or for MES systems that read fixed-width text.
+
+**\*\*PDF:\*\*** A printable landscape report with source metadata, manual inputs, selected tables, repeating column headers, and page numbers. Large tables continue across pages. PDF uses a dependency-free standard-library renderer; no package installation is required. Shared-folder and download delivery are supported. API delivery sends PDFs as application/pdf; confirm the receiving API accepts PDF files before enabling it.
 
 
 
@@ -579,7 +581,7 @@ All settings can be changed in the control panel. They are stored in \`config.js
 
 \| \`output_folder\` | \`./output\` | Generated files, plus \`\_outbox\` for pending deliveries |
 
-\| \`output_format\` | \`json\` | \`json\`, \`csv\` or \`txt\` |
+\| \`output_format\` | \`json\` | \`json\`, \`csv\`, \`txt\` or \`pdf\` |
 
 \| \`csv_layout\` | \`sections\` | \`sections\` or \`flat\` (CSV only) |
 

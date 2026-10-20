@@ -2,6 +2,7 @@
 import json
 import logging
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -102,6 +103,24 @@ class Rendering(unittest.TestCase):
         self.assertIn("OPERATOR", t)
         self.assertIn("=== HEADER  [A2:B9]  (7 rows) ===", t)
 
+    def test_pdf_metadata_tables_and_repeated_headers_across_pages(self):
+        self.cfg.update(output_format="pdf", station_name="Station-PDF")
+        self.cfg["selections"] = ["HEADER"]
+        self.rows = [["[HEADER]"], ["ID", "Value"], *[[str(i), "payload"] for i in range(100)]]
+        data = self.out("pdf")
+        self.assertTrue(data.startswith(b"%PDF-1.4"))
+        texts = [bytes.fromhex(x.decode("ascii")).decode("cp1252")
+                 for x in re.findall(rb"<([0-9A-F]+)> Tj", data)]
+        self.assertIn("Source file: x.csv", texts)
+        self.assertIn("Station: Station-PDF", texts)
+        self.assertIn("Operator: OP-17", texts)
+        self.assertTrue(any(value.startswith("HEADER") for value in texts))
+        self.assertIn("ID", texts)
+        self.assertIn("Value", texts)
+        self.assertIn("payload", texts)
+        self.assertGreaterEqual(data.count(b"/Type /Page /Parent"), 2)
+        self.assertGreaterEqual(texts.count("ID"), 2)
+
 
 class EngineEndToEnd(unittest.TestCase):
     PORT = 18765
@@ -161,6 +180,20 @@ class EngineEndToEnd(unittest.TestCase):
         eng.scan_once()
         self.assertEqual(eng.queued()["api"], 0)
         self.assertEqual(eng.ledger.recent()[0]["api"], "ok (retried)")
+
+    def test_pdf_automatic_pipeline_shared_folder_and_api_delivery(self):
+        before = len(self.mes.items)
+        self.drop("pdf_batch.csv")
+        eng = core.Engine(dict(self.cfg, output_format="pdf"))
+        self.assertEqual(eng.scan_once(), 1)
+        out = next((self.ws / "out").glob("*.pdf"))
+        self.assertTrue(out.read_bytes().startswith(b"%PDF-1.4"))
+        self.assertEqual((self.ws / "share" / out.name).read_bytes(), out.read_bytes())
+        received = self.mes.items[before]
+        self.assertEqual(received["type"], "application/pdf")
+        self.assertEqual(Path(received["path"]).read_bytes(), out.read_bytes())
+        record = eng.ledger.recent()[0]
+        self.assertEqual((record["status"], record["shared"], record["api"]), ("ok", "ok", "ok"))
 
     def test_duplicate_guard(self):
         eng = core.Engine(self.cfg)

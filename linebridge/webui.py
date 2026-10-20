@@ -186,8 +186,10 @@ def preview(body):
     text, chosen, warnings, tables = core.build_output(name, "(preview)", rows, cfg)
     summary = [{"name": n, "range": t["range"], "columns": t["columns"], "row_count": len(t["rows"]),
                 "sample": t["rows"][:4]} for n, t in tables.items()]
+    is_pdf = cfg["output_format"] == "pdf"
     return {"tables": summary, "chosen": list(chosen), "warnings": warnings,
-            "output": text[:60000], "truncated": len(text) > 60000, "format": cfg["output_format"]}
+            "output": "PDF document ready to generate." if is_pdf and chosen else ("" if is_pdf else text[:60000]),
+            "truncated": False if is_pdf else len(text) > 60000, "format": cfg["output_format"]}
 
 
 def test_api(body):
@@ -312,7 +314,7 @@ def list_outputs(cfg):
     if not folder.is_dir():
         return []
     root = folder.resolve()
-    files = (p for p in folder.iterdir() if p.is_file() and p.suffix.lower() in (".json", ".csv", ".txt")
+    files = (p for p in folder.iterdir() if p.is_file() and p.suffix.lower() in (".json", ".csv", ".txt", ".pdf")
              and not p.name.startswith(".") and p.resolve().parent == root)
     return [{"name": p.name, "format": p.suffix[1:].lower(), "size": p.stat().st_size,
              "modified": datetime.fromtimestamp(p.stat().st_mtime).isoformat(timespec="seconds")}
@@ -321,7 +323,7 @@ def list_outputs(cfg):
 
 def read_output(cfg, name):
     """Read one finished document; never accept a path outside the output folder."""
-    if not name or name.startswith(".") or "/" in name or "\\" in name or Path(name).suffix.lower() not in (".json", ".csv", ".txt"):
+    if not name or name.startswith(".") or "/" in name or "\\" in name or Path(name).suffix.lower() not in (".json", ".csv", ".txt", ".pdf"):
         raise ValueError("Invalid output filename")
     folder = Path(cfg["output_folder"])
     target = folder / name
@@ -329,8 +331,9 @@ def read_output(cfg, name):
         raise FileNotFoundError("Output file not found")
     if target.stat().st_size > 10 * 1024 * 1024:
         raise ValueError("Output file is too large to preview (10 MB limit)")
-    return {"name": name, "format": target.suffix[1:].lower(),
-            "content": target.read_text(encoding="utf-8")}
+    fmt = target.suffix[1:].lower()
+    return {"name": name, "format": fmt, "size": target.stat().st_size,
+            "content": "" if fmt == "pdf" else target.read_text(encoding="utf-8")}
 
 
 def _parse_multipart(raw_bytes, content_type_header):

@@ -16,14 +16,17 @@ class OutputViewer(unittest.TestCase):
             for fmt in core.FORMATS:
                 config = core.normalize_config({"output_format": fmt})
                 content, _, _, _ = core.build_output("sample.csv", "abc", rows, config)
-                (folder / f"result.{fmt}").write_text(content, encoding="utf-8")
+                (folder / f"result.{fmt}").write_bytes(content if isinstance(content, bytes) else content.encode("utf-8"))
             (folder / "_outbox").mkdir()
             (folder / ".partial.json").write_text("incomplete", encoding="utf-8")
             self.assertEqual({f["format"] for f in list_outputs(cfg)}, set(core.FORMATS))
             for fmt in core.FORMATS:
                 result = read_output(cfg, f"result.{fmt}")
                 self.assertEqual(result["format"], fmt)
-                self.assertIn("sample.csv", result["content"])
+                if fmt == "pdf":
+                    self.assertEqual(result["content"], "")
+                else:
+                    self.assertIn("sample.csv", result["content"])
 
     def test_rejects_paths_outside_output_folder(self):
         with tempfile.TemporaryDirectory() as tmp:

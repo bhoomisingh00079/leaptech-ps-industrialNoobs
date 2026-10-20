@@ -6,6 +6,7 @@ import tempfile
 import unittest
 import urllib.request
 import urllib.error
+from unittest import mock
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
@@ -139,6 +140,32 @@ class UploadWorkflowTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(headers.get("Content-Type"), "text/plain")
         self.assertIn("STATION       : TestStation-01", body_txt.decode("utf-8"))
+
+    def test_upload_pdf_download_and_shared_delivery(self):
+        self.cfg.update(shared_enabled=True, shared_folder=str(self.ws / "shared"))
+        content = "Ref,Result\nR1,OK\nR2,FAIL\n"
+        res = self._post_json("/api/upload", {"name": "board.pdf.csv", "csv": content, "format": "pdf"})
+        self.assertTrue(res["output"].endswith(".pdf"))
+        saved = self.out_dir / res["output"]
+        self.assertTrue(saved.read_bytes().startswith(b"%PDF-1.4"))
+        self.assertEqual((self.ws / "shared" / saved.name).read_bytes(), saved.read_bytes())
+        status, headers, body = self._get(res["download_url"])
+        self.assertEqual(status, 200)
+        self.assertEqual(headers.get("Content-Type"), "application/pdf")
+        self.assertEqual(body, saved.read_bytes())
+        self.assertEqual(res["format"], "pdf")
+
+    def test_pdf_upload_empty_input_and_render_failure(self):
+        with self.assertRaises(urllib.error.HTTPError) as empty:
+            self._post_json("/api/upload", {"name": "empty.csv", "csv": "", "format": "pdf"})
+        self.assertEqual(empty.exception.code, 400)
+        with mock.patch.object(core, "render_pdf", side_effect=RuntimeError("renderer failed")):
+            with self.assertRaises(urllib.error.HTTPError) as failed:
+                self._post_json("/api/upload", {
+                    "name": "board.csv", "csv": "Ref,Result\nR1,OK\n", "format": "pdf"
+                })
+        self.assertEqual(failed.exception.code, 400)
+        self.assertIn("renderer failed", failed.exception.read().decode("utf-8"))
 
     def test_multipart_upload(self):
         content = "ColA,ColB\n10,20\n30,40\n".encode("utf-8")

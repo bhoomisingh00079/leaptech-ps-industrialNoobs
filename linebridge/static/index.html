@@ -203,7 +203,7 @@ dialog::backdrop{background:#0008}
       <h3><span class="n">2</span>Output format</h3>
       <p class="hint">The format your MES expects.</p>
       <div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center">
-        <div class="seg" id="fmtSeg"><button data-v="json">JSON</button><button data-v="csv">CSV</button><button data-v="txt">TXT</button></div>
+        <div class="seg" id="fmtSeg"><button data-v="json">JSON</button><button data-v="csv">CSV</button><button data-v="txt">TXT</button><button data-v="pdf">PDF</button></div>
         <label class="l" id="layoutWrap" style="display:flex;gap:8px;align-items:center">CSV layout
           <select id="csv_layout" style="width:auto"><option value="sections">Sections (one block per table)</option><option value="flat">Flat (one row per record)</option></select>
         </label>
@@ -257,7 +257,7 @@ dialog::backdrop{background:#0008}
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><label class="drop" id="drop" style="flex:1"><input type="file" id="file" accept=".csv,.txt,.log,.json" hidden><span id="dropTxt">Drop a CSV, text log, or JSON file, or click to choose</span></label><button class="btn" id="btnSample">Load bundled sample</button></div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px">
         <label class="l" style="font-weight:600">Output format</label>
-        <div class="seg" id="uploadFmtSeg"><button type="button" data-v="json" class="on">JSON</button><button type="button" data-v="csv">CSV</button><button type="button" data-v="txt">TXT</button></div>
+        <div class="seg" id="uploadFmtSeg"><button type="button" data-v="json" class="on">JSON</button><button type="button" data-v="csv">CSV</button><button type="button" data-v="txt">TXT</button><button type="button" data-v="pdf">PDF</button></div>
         <button class="btn primary" id="btnProcessUpload" disabled>Process &amp; Download</button>
         <span id="uploadMsg" class="result"></span>
       </div>
@@ -296,7 +296,7 @@ dialog::backdrop{background:#0008}
   <li><b>Integration Check</b><span>Run the check to confirm folders, sample data, and delivery paths are ready.</span></li>
   <li><b>Start Watching</b><span>Start automatic pickup, or use Run once to process files on demand.</span></li>
   <li><b>Preview &amp; Test</b><span>Load a sample or machine file to inspect detected tables and output.</span></li>
-  <li><b>Output viewer</b><span>Open saved JSON, CSV, and TXT files inside the panel.</span></li>
+  <li><b>Output viewer</b><span>Open saved JSON, CSV, and TXT files, or download PDF reports.</span></li>
   <li><b>History / Live Log</b><span>Review delivery results in History and current activity in Live Log.</span></li>
   <li><b>Customer MES</b><span>Check the customer system or shared folder for delivered files.</span></li>
   <li><b>Outage Recovery</b><span>When a destination returns, queued files are retried automatically.</span></li>
@@ -340,7 +340,7 @@ Object.entries(controlTips).forEach(([id,text]) => { const el = $("#"+id); if (e
 const tabTips = {
   setup: "Set folders, output, selected data, and delivery destinations.",
   preview: "Inspect a sample or machine file and its converted output.",
-  outputs: "Browse and read saved JSON, CSV, and TXT outputs.",
+  outputs: "Browse and read saved JSON, CSV, and TXT outputs, or download PDF reports.",
   history: "Review processed files and their delivery outcomes.",
   log: "See recent LineBridge activity and messages."
 };
@@ -417,7 +417,7 @@ function collect(){
   c.shared_enabled = $("#shared_enabled").checked; c.api_enabled = $("#api_enabled").checked;
   c.api_body = $("#api_body").value; c.csv_layout = $("#csv_layout").value; c.output_format = fmt; return c;
 }
-function setFmt(v){ fmt = v; $$("#fmtSeg button").forEach(b => b.classList.toggle("on", b.dataset.v===v)); $("#layoutWrap").style.visibility = v==="csv"?"visible":"hidden"; }
+function setFmt(v){ fmt = v; uploadFmt = v; $$("#fmtSeg button,#uploadFmtSeg button").forEach(b => b.classList.toggle("on", b.dataset.v===v)); $("#layoutWrap").style.visibility = v==="csv"?"visible":"hidden"; }
 function destState(){ $("#dShared").classList.toggle("off", !$("#shared_enabled").checked); $("#dApi").classList.toggle("off", !$("#api_enabled").checked); }
 $$("#fmtSeg button").forEach(b => b.onclick = () => { setFmt(b.dataset.v); refreshPreview(); });
 $("#shared_enabled").onchange = $("#api_enabled").onchange = destState;
@@ -514,9 +514,7 @@ $("#btnSample").onclick = async () => {
 };
 let uploadFmt = "json";
 $$("#uploadFmtSeg button").forEach(b => b.onclick = () => {
-  uploadFmt = b.dataset.v;
-  $$("#uploadFmtSeg button").forEach(x => x.classList.toggle("on", x === b));
-  setFmt(uploadFmt);
+  setFmt(b.dataset.v);
   refreshPreview();
 });
 $("#btnProcessUpload").onclick = async () => {
@@ -616,7 +614,8 @@ async function openOutput(name){
       const parsed = csvBlocks(savedOutput.content);
       outputMeta = parsed.meta; outputBlocks = parsed.blocks;
     }
-    $("#outputInfo").textContent = `${savedOutput.format.toUpperCase()} · ${sizeText(new Blob([savedOutput.content]).size)} · ${outputBlocks.length || 1} section(s)`;
+    $("#outputInfo").textContent = `${savedOutput.format.toUpperCase()} · ${sizeText(savedOutput.size ?? new Blob([savedOutput.content]).size)}` +
+      (savedOutput.format === "pdf" ? " · ready to download or print" : ` · ${outputBlocks.length || 1} section(s)`);
     const dlBtn = $("#btnDownloadCurrent");
     if (dlBtn) {
       dlBtn.style.display = "inline-block";
@@ -631,9 +630,10 @@ function renderSavedOutput(){
   const body = $("#outputBody");
   const meta = Object.entries(outputMeta).map(([k,v]) => `<span><b>${esc(k.replaceAll('_',' '))}:</b> ${esc(typeof v === 'object' ? JSON.stringify(v) : v)}</span>`).join('');
   body.innerHTML = (meta ? `<div class="output-meta">${meta}</div>` : '') +
-    (savedOutput.format === 'txt' ? `<pre>${esc(savedOutput.content)}</pre>` :
+    (savedOutput.format === 'pdf' ? `<div class="empty">PDF document · use Download to open or print this file.</div>` :
+     savedOutput.format === 'txt' ? `<pre>${esc(savedOutput.content)}</pre>` :
      `<div class="output-tools"><label>Section <select id="outputSection">${outputBlocks.map((b,i) => `<option value="${i}" ${i===outputBlock?'selected':''}>${esc(b.name)} (${b.rows.length} rows)</option>`).join('')}</select></label><input type="text" id="outputColumns" placeholder="Filter columns" aria-label="Filter columns"><label><input type="checkbox" id="outputRaw"> Raw text</label></div><div id="outputData"></div>`);
-  if (savedOutput.format === 'txt') return;
+  if (savedOutput.format === 'txt' || savedOutput.format === 'pdf') return;
   $('#outputSection').onchange = e => { outputBlock = Number(e.target.value); outputPage = 0; renderOutputTable(); };
   $('#outputColumns').oninput = () => { outputPage = 0; renderOutputTable(); };
   $('#outputRaw').onchange = renderOutputTable;

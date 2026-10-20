@@ -5,7 +5,7 @@ Pipeline for every machine CSV that appears in the watched folder:
 
     detect (stable file) -> fingerprint (SHA-256, duplicate guard)
     -> parse into tables -> apply up to 10 selectors -> add 2 manual inputs
-    -> render JSON / CSV / TXT (atomic write) -> deliver (shared folder + API, with outbox retry)
+    -> render JSON / CSV / TXT / PDF (atomic write) -> deliver (shared folder + API, with outbox retry)
     -> archive source in dated back-up folder -> record everything in the audit ledger
 
 Only the Python standard library is used, so it runs on locked-down factory PCs with no internet.
@@ -33,8 +33,8 @@ __version__ = "1.0.0"
 
 MAX_SELECTIONS = 10
 MAX_MANUAL = 2
-FORMATS = ("json", "csv", "txt")
-CONTENT_TYPES = {"json": "application/json", "csv": "text/csv", "txt": "text/plain"}
+FORMATS = ("json", "csv", "txt", "pdf")
+CONTENT_TYPES = {"json": "application/json", "csv": "text/csv", "txt": "text/plain", "pdf": "application/pdf"}
 
 DEFAULT_CONFIG = {
     "station_name": "SMT Line 1",
@@ -43,7 +43,7 @@ DEFAULT_CONFIG = {
     "priority_patterns": [],              # optional glob patterns processed before other files, in order
     "backup_folder": "./backup",          # used source files are archived here (dated sub-folders)
     "output_folder": "./output",          # generated files are written here first
-    "output_format": "json",              # json | csv | txt
+    "output_format": "json",              # json | csv | txt | pdf
     "csv_layout": "sections",             # sections | flat   (only for csv output)
     "selections": [""] * MAX_SELECTIONS,  # e.g. "L1xM8", "L1xM8[Ref,Result]", "L1:M8", "A1:B*", "L2x*"
     "manual_inputs": [{"label": "", "value": ""} for _ in range(MAX_MANUAL)],
@@ -279,7 +279,7 @@ def manual_dict(cfg):
 
 
 def render(fmt, meta, tables, csv_layout="sections"):
-    """Return the output document as text."""
+    """Return the output document as text, or bytes for PDF."""
     manual = meta.get("manual_inputs", {})
     if fmt == "json":
         doc = dict(meta)
@@ -330,7 +330,140 @@ def render(fmt, meta, tables, csv_layout="sections"):
                 lines.append(" | ".join(str(r[c]).ljust(w) for c, w in zip(cols, widths)).rstrip())
         return "\n".join(lines) + "\n"
 
+    if fmt == "pdf":
+        return render_pdf(meta, tables)
+
     raise ValueError(f"Unsupported format: {fmt}")
+
+
+def render_pdf(meta, tables):
+    """Create a compact, paginated PDF using only the Python standard library."""
+    # A deliberately small PDF 1.4 writer keeps LineBridge deployable offline.
+    # Landscape pages give machine tables more room; Helvetica is built into PDF readers.
+    page_w, page_h = 792, 612
+    margin, bottom = 36, 42
+    usable_w = page_w - 2 * margin
+    pages = []
+    commands = []
+    y = page_h - 40
+
+    def safe(value):
+        value = str(value if value is not None else "")
+        return value.encode("cp1252", "replace").decode("cp1252")
+
+    def text_cmd(value, x, top, size=9, bold=False):
+        encoded = safe(value).encode("cp1252").hex().upper()
+        font = "F2" if bold else "F1"
+        return f"BT /{font} {size} Tf 1 0 0 1 {x:.2f} {top-size:.2f} Tm <{encoded}> Tj ET"
+
+    def new_page():
+        nonlocal commands, y
+        if commands:
+            pages.append(commands)
+        commands = []
+        y = page_h - 40
+
+    def ensure(height):
+        nonlocal y
+        if y - height < bottom:
+            new_page()
+
+    def line(x1, y1, x2, y2):
+        commands.append(f"0.65 w {x1:.2f} {y1:.2f} m {x2:.2f} {y2:.2f} l S")
+
+    def metadata():
+        nonlocal y
+        for label, value in (("Source file", meta.get("source_file", "")),
+                             ("Processed at", meta.get("processed_at", "")),
+                             ("Station", meta.get("station", "")),
+                             ("SHA-256", meta.get("sha256", ""))):
+            ensure(14)
+            commands.append(text_cmd(f"{label}: {value}", margin, y, 9))
+            y -= 13
+        manual = meta.get("manual_inputs", {}) or {}
+        for label, value in manual.items():
+            ensure(14)
+            commands.append(text_cmd(f"{label}: {value}", margin, y, 9))
+            y -= 13
+        y -= 6
+
+    def draw_header(name, columns, widths, table_width):
+        nonlocal y
+        ensure(36)
+        commands.append(text_cmd(name, margin, y, 11, True))
+        y -= 17
+        x = margin
+        for col, width in zip(columns, widths):
+            commands.append(text_cmd(col[:max(1, int(width / 5.0))], x + 3, y, 8, True))
+            x += width
+        line(margin, y - 3, margin + table_width, y - 3)
+        y -= 16
+
+    metadata()
+    for name, table in tables.items():
+        cols = list(table.get("columns", []))
+        if not cols:
+            continue
+        # Keep columns legible for very wide machine tables by laying column groups
+        # on successive pages, then splitting each group vertically as needed.
+        max_columns = max(1, int(usable_w / 88))
+        for col_start in range(0, len(cols), max_columns):
+            page_cols = cols[col_start:col_start + max_columns]
+            widths = [usable_w / len(page_cols)] * len(page_cols)
+            suffix = " (continued columns)" if col_start else ""
+            table_title = f"{name}{suffix}  [{table.get('range', '')}]  ({len(table.get('rows', []))} rows)"
+            draw_header(table_title, page_cols, widths, usable_w)
+            for row in table.get("rows", []):
+                ensure(16)
+                x = margin
+                for col, width in zip(page_cols, widths):
+                    max_chars = max(1, int((width - 6) / 4.3))
+                    value = safe(row.get(col, "")).replace("\r", " ").replace("\n", " ")
+                    if len(value) > max_chars:
+                        value = value[:max(1, max_chars - 1)] + "…"
+                    commands.append(text_cmd(value, x + 3, y, 8))
+                    x += width
+                y -= 14
+                if y < bottom + 16:
+                    new_page()
+                    draw_header(f"{name}  (continued)", page_cols, widths, usable_w)
+            y -= 9
+    if commands or not pages:
+        pages.append(commands)
+
+    objects = [None]
+    def add_object(data):
+        objects.append(data.encode("ascii"))
+        return len(objects) - 1
+
+    catalog_id = add_object("")
+    pages_id = add_object("")
+    font_regular_id = add_object("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>")
+    font_bold_id = add_object("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>")
+    page_ids = []
+    for page_number, cmds in enumerate(pages, 1):
+        cmds = list(cmds)
+        cmds.append(text_cmd(f"Page {page_number} of {len(pages)}", page_w - 95, 25, 8))
+        stream = "\n".join(cmds).encode("ascii")
+        objects.append(f"<< /Length {len(stream)} >>\nstream\n".encode("ascii") + stream + b"\nendstream")
+        stream_id = len(objects) - 1
+        page_ids.append(add_object(f"<< /Type /Page /Parent {pages_id} 0 R /MediaBox [0 0 {page_w} {page_h}] "
+                                   f"/Resources << /Font << /F1 {font_regular_id} 0 R /F2 {font_bold_id} 0 R >> >> "
+                                   f"/Contents {stream_id} 0 R >>"))
+    objects[pages_id] = (f"<< /Type /Pages /Kids [{' '.join(f'{i} 0 R' for i in page_ids)}] "
+                         f"/Count {len(page_ids)} >>").encode("ascii")
+    objects[catalog_id] = f"<< /Type /Catalog /Pages {pages_id} 0 R >>".encode("ascii")
+    pdf = bytearray(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
+    offsets = [0]
+    for obj_id, obj in enumerate(objects[1:], 1):
+        offsets.append(len(pdf))
+        pdf.extend(f"{obj_id} 0 obj\n".encode("ascii") + obj + b"\nendobj\n")
+    xref = len(pdf)
+    pdf.extend(f"xref\n0 {len(objects)}\n0000000000 65535 f \n".encode("ascii"))
+    for offset in offsets[1:]:
+        pdf.extend(f"{offset:010d} 00000 n \n".encode("ascii"))
+    pdf.extend(f"trailer\n<< /Size {len(objects)} /Root {catalog_id} 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode("ascii"))
+    return bytes(pdf)
 
 
 def atomic_write(path, data):
