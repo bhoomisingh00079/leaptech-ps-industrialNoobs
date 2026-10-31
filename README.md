@@ -786,3 +786,11 @@ The 19 tests cover table detection and ranges, padding removal, every selector f
 
 
 License: MIT
+
+## YSUP-Link verification and Admin access
+
+The control panel has a separate **YSUP-Link** tab for the component verification workflow. Import a CSV database with a header row containing `Part Number` (or `CmpID`). Optional recognized headers include `Reel ID`/`UniqueID` and `Lot ID`; extra CSV columns can also be selected for matching when those properties appear in incoming payloads. The imported material file is stored at the configured `ysup_database` path.
+
+YSUP-Link sends JSON requests to `POST /ysup/api`. The receiver handles `SetupRequest` and `MaterialRequest` payloads and returns the corresponding YSUP-Link response structure. Part Number and Reel ID matching are enabled by default. Lot ID matching starts disabled because the supplied SetupRequest schema does not carry a LotID field. The endpoint supports the HTTP Basic authentication required by both supplied OpenAPI specifications. Configure inbound and outbound credentials in the YSUP-Link tab for remote use; an optional bearer-style token is available for existing deployments. Local loopback calls can be tested without credentials. Optional `REMOTE_SCAN` callback settings are available for the separate REST-MES route. LineBridge does not communicate directly with the machine.
+
+On first startup, the application prints a one-time random password for the only user, `Admin`, to the console. Save it and sign in to the web panel. The Admin password is stored as a salted PBKDF2 hash, and the panel session expires after eight hours. Change the bootstrap password from the Admin password control before deployment. YSUP Basic Auth credentials are independent from the browser login.

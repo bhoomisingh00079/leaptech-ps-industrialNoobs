@@ -154,6 +154,8 @@ dialog::backdrop{background:#0008}
   <button class="btn primary" id="btnStart">Start watching</button>
   <button class="btn danger" id="btnStop" disabled>Stop</button>
   <button class="btn" id="btnAppearance">Appearance</button>
+  <button class="btn" id="btnPassword">Admin password</button>
+  <button class="btn" id="btnLogout">Sign out</button>
   <button class="btn guide-trigger" id="btnGuide" aria-label="Open user guide" title="Open the short user guide">?</button>
 </header>
 
@@ -168,6 +170,7 @@ dialog::backdrop{background:#0008}
 
   <nav class="tabs">
     <button data-tab="setup" class="active">Setup</button>
+    <button data-tab="ysup">YSUP-Link</button>
     <button data-tab="preview">Preview &amp; test</button>
     <button data-tab="outputs">Output viewer</button>
     <button data-tab="history">History</button>
@@ -249,6 +252,35 @@ dialog::backdrop{background:#0008}
     <div class="savebar"><button class="btn primary" id="btnSave">Save settings</button><span id="saveMsg" class="l"></span></div>
   </section>
 
+  <section class="tab" id="tab-ysup">
+    <div class="card">
+      <h3>YSUP-Link material verification</h3>
+      <p class="hint">Import the customer material database as CSV. YSUP-Link sends scanned setup or material requests to the API below. The panel compares the selected identifiers and returns the response format defined by YSUP-Link.</p>
+      <div class="row"><label class="l">Material database CSV</label><input type="file" id="ysupFile" accept=".csv,text/csv"><button class="btn primary" id="ysupImport">Import database</button></div>
+      <div class="result" id="ysupDbStatus">No database imported</div>
+      <div class="grid2" style="margin-top:14px">
+        <div class="row"><label class="l">Part Number / CmpID</label><select id="ysupUsePart"><option value="true">Use</option><option value="false">Do not use</option></select><span></span></div>
+        <div class="row"><label class="l">Reel ID</label><select id="ysupUseReel"><option value="true">Use</option><option value="false">Do not use</option></select><span></span></div>
+        <div class="row"><label class="l">Lot ID</label><select id="ysupUseLot"><option value="true">Use</option><option value="false">Do not use</option></select><span></span></div>
+        <div class="row"><label class="l">Other CSV columns</label><input id="ysupExtra" placeholder="Customer-specific column names"><span></span></div>
+      </div>
+      <div class="row"><label class="l">Inbound Basic Auth username</label><input type="text" id="ysupBasicUser"><span></span></div>
+      <div class="row"><label class="l">Inbound Basic Auth password</label><input type="password" id="ysupBasicPass"><span></span></div>
+      <div class="row"><label class="l">Compatibility API token</label><input type="password" id="ysupToken"><span></span></div>
+      <p class="hint">Inbound endpoint: <code>/ysup/api</code>. It accepts YSUP-Link JSON with HTTP Basic authentication, as required by the supplied API specification. Selected fields are compared when the YSUP request carries them. The SetupRequest contract includes Part Number and Reel ID but does not include Lot ID. Loopback testing can omit credentials.</p>
+    </div>
+    <div class="card">
+      <h3>Optional YSUP REST-MES callback</h3>
+      <label class="toggle"><input type="checkbox" id="ysupOutboundEnabled"> Send REMOTE_SCAN result to YSUP REST-MES</label>
+      <div class="row"><label class="l">REST-MES API URL</label><input id="ysupOutboundUrl" placeholder="Provided by YSUP-Link"><span></span></div>
+      <div class="row"><label class="l">client-name header</label><input id="ysupClientName" placeholder="Registered MES name"><span></span></div>
+      <div class="row"><label class="l">Machine serial</label><input id="ysupMachine" placeholder="YSUP machine serial"><span></span></div>
+      <div class="row"><label class="l">REST-MES Basic Auth username</label><input id="ysupOutUser"><span></span></div>
+      <div class="row"><label class="l">REST-MES Basic Auth password</label><input id="ysupOutPass" type="password"><span></span></div>
+      <button class="btn primary" id="ysupSave">Save YSUP settings</button><span id="ysupSaveMsg" class="result"></span>
+    </div>
+  </section>
+
   <!-- ============ PREVIEW ============ -->
   <section class="tab" id="tab-preview">
     <div class="card">
@@ -290,7 +322,17 @@ dialog::backdrop{background:#0008}
   <section class="tab" id="tab-log"><div class="card"><pre id="log"></pre></div></section>
 </main>
 
+<div id="loginScreen" style="display:none;position:fixed;inset:0;z-index:1000;background:var(--bg);align-items:center;justify-content:center;padding:20px">
+  <form id="loginForm" class="card" style="width:min(420px,100%);padding:24px">
+    <h2>LineBridge Admin</h2><p class="hint">Sign in with the single Admin account.</p>
+    <label class="l" for="loginUser">Username</label><input id="loginUser" autocomplete="username" value="Admin" required>
+    <label class="l" for="loginPass" style="display:block;margin-top:12px">Password</label><input id="loginPass" type="password" autocomplete="current-password" required>
+    <p id="loginError" class="result bad"></p><button class="btn primary" style="margin-top:12px;width:100%">Sign in</button>
+  </form>
+</div>
+
 <dialog id="appearanceDlg"><div class="dlg-h">Appearance</div><div style="padding:18px"><div class="row"><label class="l">Theme</label><select id="themeSelect"><option value="system">Use system setting</option><option value="light">Light</option><option value="dark">Dark</option><option value="contrast">High contrast</option></select><span></span></div><div class="row"><label class="l">Text size</label><select id="fontSelect"><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option><option value="xlarge">Extra large</option></select><span></span></div><p class="hint" style="margin:14px 0 0">These preferences stay on this computer and do not change the machine or MES profile.</p></div><div class="dlg-f"><span class="spacer"></span><button class="btn primary" id="appearanceDone">Done</button></div></dialog>
+<dialog id="passwordDlg"><div class="dlg-h">Change Admin password</div><form id="passwordForm" style="padding:18px"><label class="l">Current password</label><input id="currentPassword" type="password" autocomplete="current-password" required><label class="l" style="display:block;margin-top:10px">New password (12+ characters)</label><input id="newPassword" type="password" autocomplete="new-password" minlength="12" required><div id="passwordMsg" class="result"></div><div class="dlg-f"><button type="button" class="btn" id="passwordCancel">Cancel</button><button class="btn primary">Update password</button></div></form></dialog>
 <dialog id="guideDlg" aria-labelledby="guideTitle"><div class="dlg-h" id="guideTitle">User Guide</div><p class="hint" style="padding:12px 18px;margin:0">Follow these steps to connect machine files to your customer's MES.</p><ol class="guide-steps">
   <li><b>Setup</b><span>Enter the machine, backup, and output folders, then choose data and delivery options.</span></li>
   <li><b>Integration Check</b><span>Run the check to confirm folders, sample data, and delivery paths are ready.</span></li>
@@ -307,9 +349,12 @@ dialog::backdrop{background:#0008}
 <script>
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const api = async (p, body) => {
-  const r = await fetch(p, body === undefined ? {} : {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+  const isForm = body instanceof FormData;
+  const r = await fetch(p, body === undefined ? {} : {method:"POST", headers:isForm ? {} : {"Content-Type":"application/json"}, body:isForm ? body : JSON.stringify(body)});
+  if (r.status === 401) { showLogin(); throw new Error("Admin login required"); }
   const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j;
 };
+function showLogin(){const el=$("#loginScreen");el.style.display="flex";$("#loginPass").focus();}
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const TEXT = ["station_name","input_folder","file_pattern","backup_folder","output_folder","shared_folder","api_url","api_token"];
 let cfg = {}, fmt = "json", logSince = 0, lastCsv = null;
@@ -339,6 +384,7 @@ const controlTips = {
 Object.entries(controlTips).forEach(([id,text]) => { const el = $("#"+id); if (el) addTip(el, text); });
 const tabTips = {
   setup: "Set folders, output, selected data, and delivery destinations.",
+  ysup: "Import material data and configure YSUP-Link validation.",
   preview: "Inspect a sample or machine file and its converted output.",
   outputs: "Browse and read saved JSON, CSV, and TXT outputs, or download PDF reports.",
   history: "Review processed files and their delivery outcomes.",
@@ -408,6 +454,12 @@ function fill(c){
   $("#shared_enabled").checked = c.shared_enabled; $("#api_enabled").checked = c.api_enabled;
   $("#api_body").value = c.api_body; $("#csv_layout").value = c.csv_layout; setFmt(c.output_format); destState();
   $("#station").textContent = c.station_name ? "· " + c.station_name : "";
+  const yf=c.ysup_fields||{}; $("#ysupUsePart").value=String(yf.part_number!==false); $("#ysupUseReel").value=String(yf.reel_id!==false); $("#ysupUseLot").value=String(yf.lot_id===true);
+  $("#ysupExtra").value=(c.ysup_extra_fields||[]).join(", "); $("#ysupToken").value=c.ysup_api_token||"";
+  $("#ysupBasicUser").value=c.ysup_basic_username||""; $("#ysupBasicPass").value=c.ysup_basic_password||"";
+  $("#ysupOutboundEnabled").checked=!!c.ysup_outbound_enabled; $("#ysupOutboundUrl").value=c.ysup_outbound_url||"";
+  $("#ysupClientName").value=c.ysup_client_name||"LEAPTECH"; $("#ysupMachine").value=c.ysup_machine_serial||"";
+  $("#ysupOutUser").value=c.ysup_outbound_username||""; $("#ysupOutPass").value=c.ysup_outbound_password||"";
 }
 function collect(){
   const c = {...cfg}; TEXT.forEach(k => c[k] = $("#"+k).value.trim());
@@ -428,6 +480,9 @@ $("#btnSave").onclick = async () => {
   try { const r = await api("/api/config", collect()); fill(r.config); flash("#saveMsg", "Saved ✓"); }
   catch(e){ flash("#saveMsg", "Error: " + e.message); }
 };
+async function refreshYsupDb(){try{const d=await api("/api/ysup/database");$("#ysupDbStatus").textContent=d.exists?"Imported database: "+d.records+" material record(s)":"No database imported";}catch(e){$("#ysupDbStatus").textContent=e.message;}}
+$("#ysupImport").onclick=async()=>{const f=$("#ysupFile").files[0];if(!f){$("#ysupDbStatus").textContent="Choose a CSV file first";return;}const data=new FormData();data.append("file",f);try{const r=await api("/api/ysup/database",data);$("#ysupDbStatus").textContent="Imported "+r.records+" material record(s) from "+f.name;}catch(e){$("#ysupDbStatus").textContent="Import failed: "+e.message;}};
+$("#ysupSave").onclick=async()=>{const c={...cfg,ysup_fields:{part_number:$("#ysupUsePart").value==="true",reel_id:$("#ysupUseReel").value==="true",lot_id:$("#ysupUseLot").value==="true"},ysup_extra_fields:$("#ysupExtra").value.split(",").map(x=>x.trim()).filter(Boolean),ysup_api_token:$("#ysupToken").value.trim(),ysup_basic_username:$("#ysupBasicUser").value.trim(),ysup_basic_password:$("#ysupBasicPass").value,ysup_outbound_enabled:$("#ysupOutboundEnabled").checked,ysup_outbound_url:$("#ysupOutboundUrl").value.trim(),ysup_client_name:$("#ysupClientName").value.trim(),ysup_machine_serial:$("#ysupMachine").value.trim(),ysup_outbound_username:$("#ysupOutUser").value.trim(),ysup_outbound_password:$("#ysupOutPass").value};try{const r=await api("/api/config",c);fill(r.config);$("#ysupSaveMsg").textContent="Saved";}catch(e){$("#ysupSaveMsg").textContent="Save failed: "+e.message;}};
 function flash(sel, msg){ $(sel).textContent = msg; setTimeout(() => $(sel).textContent = "", 3000); }
 
 // ---------- integration preflight + appearance
@@ -451,6 +506,9 @@ $("#btnAppearance").onclick = () => {
   $("#themeSelect").value = appearance.theme; $("#fontSelect").value = appearance.font;
   $("#appearanceDlg").showModal();
 };
+$("#btnPassword").onclick=()=>$("#passwordDlg").showModal();
+$("#passwordCancel").onclick=()=>$("#passwordDlg").close();
+$("#passwordForm").onsubmit=async e=>{e.preventDefault();try{await api("/api/change-password",{current_password:$("#currentPassword").value,new_password:$("#newPassword").value});$("#passwordMsg").textContent="Password updated. Sign in again.";$("#passwordDlg").close();await api("/api/logout",{});showLogin();}catch(err){$("#passwordMsg").textContent=err.message;}};
 $("#appearanceDone").onclick = () => {
   appearance = {theme:$("#themeSelect").value, font:$("#fontSelect").value};
   applyAppearance(); $("#appearanceDlg").close();
@@ -681,7 +739,11 @@ async function poll(){
     logSince = s.logs.at(-1).id; if (atBottom) el.scrollTop = el.scrollHeight;
   }
 }
-api("/api/config").then(fill); poll(); setInterval(poll, 1500);
+let pollTimer=null;
+async function initPanel(){try{const me=await api("/api/me");if(!me.authenticated){showLogin();return;}$("#loginScreen").style.display="none";fill(await api("/api/config"));refreshYsupDb();poll();if(!pollTimer)pollTimer=setInterval(poll,1500);}catch(e){showLogin();}}
+$("#loginForm").onsubmit=async e=>{e.preventDefault();$("#loginError").textContent="";try{await api("/api/login",{username:$("#loginUser").value,password:$("#loginPass").value});$("#loginPass").value="";await initPanel();}catch(err){$("#loginError").textContent=err.message;}};
+$("#btnLogout").onclick=async()=>{try{await api("/api/logout",{});}finally{showLogin();}};
+initPanel();
 </script>
 </body>
 </html>

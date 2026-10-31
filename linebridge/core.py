@@ -58,6 +58,19 @@ DEFAULT_CONFIG = {
     "poll_seconds": 3,
     "stable_seconds": 2,                  # file must be untouched this long (machine finished writing)
     "ledger_path": "./linebridge_ledger.db",
+    "ysup_database": "./ysup_materials.csv",
+    "ysup_fields": {"part_number": True, "reel_id": True, "lot_id": False},
+    "ysup_extra_fields": [],
+    "ysup_api_token": "",
+    "ysup_basic_username": "",
+    "ysup_basic_password": "",
+    "ysup_outbound_enabled": False,
+    "ysup_outbound_url": "",
+    "ysup_outbound_username": "",
+    "ysup_outbound_password": "",
+    "ysup_client_name": "LEAPTECH",
+    "ysup_machine_serial": "",
+    "admin_password_hash": "",
 }
 
 log = logging.getLogger("linebridge")
@@ -79,6 +92,9 @@ def normalize_config(cfg):
     base["selections"] = [str(s or "").strip() for s in (list(base["selections"]) + [""] * MAX_SELECTIONS)][:MAX_SELECTIONS]
     mi = [m for m in base["manual_inputs"] if isinstance(m, dict)] + [{"label": "", "value": ""}] * MAX_MANUAL
     base["manual_inputs"] = [{"label": str(m.get("label", "")), "value": str(m.get("value", ""))} for m in mi[:MAX_MANUAL]]
+    base["ysup_fields"] = {**DEFAULT_CONFIG["ysup_fields"], **(base.get("ysup_fields") or {})}
+    base["ysup_extra_fields"] = [str(x) for x in base.get("ysup_extra_fields", []) if str(x).strip()]
+    base["ysup_database"] = str(base.get("ysup_database") or DEFAULT_CONFIG["ysup_database"])
     if base["output_format"] not in FORMATS:
         raise ValueError(f"output_format must be one of {FORMATS}")
     return base

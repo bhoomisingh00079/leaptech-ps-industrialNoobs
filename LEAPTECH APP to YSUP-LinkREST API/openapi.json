@@ -1,0 +1,1786 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "MES to YSUP-Link/REST API",
+    "version": "1.0.0",
+    "description": "\n<h2 style=\"border-bottom: 1.5px solid #333\">MDOC-SOFT52079/G20250804133017</h2>\n<div style=\"border: solid 2px #FF0000; padding: 10px;\">\n本文書に含まれる技術内容は当社の秘密情報です。当社の許諾無く第三者への開示はできません。<br>\nThe Information contained in this message may be confidential and legally protected under applicable law.The message is intended solely for the addressee(s).If you are not the intended recipient, you are hereby notified that any use, forwarding, dissemination,or reproduction of this message is strictly prohibited and maybe unlawful.\n</div>\n\n<h2 style=\"border-bottom: 1.5px solid #333\">Description</h2>\nThis specification document summarises the APIs that <b>MES ➡ YAMAHA</b>.<br>\nThe following APIs are supported.<br>\n\n| Event Name                            | Description                                                                 |\n|---------------------------------------|-----------------------------------------------------------------------------|\n| MachineOperationCommand               | Sends machine-operation command (e.g., RUN, STOP, RESET) to control machine |\n| DisplayMessage                        | Sends display-message command to show the error window on machine           |\n\n<h2 style=\"border-bottom: 1.5px solid #333\">Note</h2>\n\nWhen sending request to RestComm Server, please note the following points.\n- Ensure that your MES is registered in the RestComm Output Module before executing any API request.\n- Select the appropriate authentication type: either Basic or None, as required.\n- Include the client-name in the request header, matching the name of your MES registered in the RestComm Output Module.\n"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3040/WebApi",
+      "description": "Local development server"
+    }
+  ],
+  "security": [
+    {
+      "BasicAuth": []
+    },
+    {}
+  ],
+  "paths": {
+    "/": {
+      "post": {
+        "summary": "Process DisplayMessage and MachineOperationCommand request from MES",
+        "tags": [
+          "REST MES ROUTES"
+        ],
+        "description": "Accepts a request with a `FuncName` indicating the type of machine command. Supports `DisplayMessage` and `MachineOperationCommand` functions.\n",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "client-name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "RestComm Registered MES name. Eg: REST-MES-1"
+          }
+        ],
+        "requestBody": {
+          "description": "Data packet sent from REST-MES to RestComm Output Module",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "title": "Display Message Request",
+                    "$ref": "#/components/schemas/DisplayMessage-Request"
+                  },
+                  {
+                    "title": "Machine Operation Command",
+                    "$ref": "#/components/schemas/MachineOperationCommand-Request"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "FuncName",
+                  "mapping": {
+                    "DisplayMessage": "#/components/schemas/DisplayMessage-Request",
+                    "MachineOperationCommand": "#/components/schemas/MachineOperationCommand-Request"
+                  }
+                }
+              },
+              "examples": {
+                "DISPLAY_MESSAGE_REQ": {
+                  "$ref": "#/components/examples/DisplayMessage-Request"
+                },
+                "MACHINE_OPERATION_COMMAND_CUR_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommand-CUR"
+                },
+                "MACHINE_OPERATION_COMMAND_ORIGIN_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommand-ORIGIN"
+                },
+                "MACHINE_OPERATION_COMMAND_RUN_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommand-RUN"
+                },
+                "MACHINE_OPERATION_COMMAND_STOP_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommand-STOP"
+                },
+                "MACHINE_OPERATION_COMMAND_RESET_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommand-RESET"
+                },
+                "MACHINE_OPERATION_COMMAND_ERRCLEAR_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommand-ERRCLEAR"
+                },
+                "MACHINE_OPERATION_COMMAND_SWI_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommand-SWI"
+                },
+                "MACHINE_OPERATION_COMMAND_READEX_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommand-READEX"
+                },
+                "MACHINE_OPERATION_COMMAND_WRITEEX_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommand-WRITEEX"
+                },
+                "MACHINE_OPERATION_COMMAND_UPDATE_PARTS_REMAIN_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommand-UPDATE_PARTS_REMAIN"
+                },
+                "MACHINE_OPERATION_COMMAND_REGISTER_PARTS_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommand-REGISTER_PARTS"
+                },
+                "MACHINE_OPERATION_COMMAND_REMOTE_SCAN_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommand-REMOTE_SCAN"
+                },
+                "MACHINE_OPERATION_COMMAND_LOCK_PANEL_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommand-LOCK_PANEL"
+                },
+                "MACHINE_OPERATION_COMMAND_BLOCK_PARTS_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommand-BLOCK_PARTS"
+                },
+                "MACHINE_OPERATION_COMMAND_UNBLOCK_PARTS_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommand-UNBLOCK_PARTS"
+                },
+                "MACHINE_OPERATION_COMMAND_BLOCK_LOCATIONS_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommand-BLOCK_LOCATIONS"
+                },
+                "MACHINE_OPERATION_COMMAND_UNBLOCK_LOCATIONS_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommand-UNBLOCK_LOCATIONS"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Message received successfully and validated at RestComm",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "title": "DisplayMessage Response",
+                      "$ref": "#/components/schemas/DisplayMessage-Response"
+                    },
+                    {
+                      "title": "MachineOperationCommand Response",
+                      "$ref": "#/components/schemas/MachineOperationCommand-Response"
+                    }
+                  ]
+                },
+                "examples": {
+                  "DISPLAY_MESSAGE_SUCCESS_RES": {
+                    "$ref": "#/components/examples/DisplayMessage-Success-Response"
+                  },
+                  "DISPLAY_MESSAGE_FAILURE_RES": {
+                    "$ref": "#/components/examples/DisplayMessage-Failure-Response"
+                  },
+                  "MACHINE_OPERATION_COMMAND_SUCCESS_RES": {
+                    "$ref": "#/components/examples/MchOperationCmd-Success-Response"
+                  },
+                  "MACHINE_OPERATION_COMMAND_FAILURE_RES": {
+                    "$ref": "#/components/examples/MchOperationCmd-Failure-Response"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error: Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Incorrect Request Body Data"
+                    },
+                    "data": {
+                      "type": "string",
+                      "nullable": true,
+                      "example": null
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Incorrect Request Body Data",
+                  "data": null
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error: Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "FuncName not available in Request Body"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "FuncName not available in Request Body"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error: Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Internal Server Error"
+                    },
+                    "data": {
+                      "type": "string",
+                      "nullable": true,
+                      "example": null
+                    }
+                  }
+                },
+                "example": {
+                  "message": "Internal Server Error",
+                  "data": null
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BasicAuth": {
+        "type": "http",
+        "scheme": "basic",
+        "description": "Basic HTTP authentication"
+      }
+    },
+    "schemas": {
+      "DisplayMessage-Request": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "CommandInfo"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "DisplayMessage",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20200225174901000",
+            "description": "Format of Trace data - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "CommandInfo": {
+            "type": "object",
+            "required": [
+              "TargetMachine",
+              "DisplayMessageCommandInfo"
+            ],
+            "properties": {
+              "TargetMachine": {
+                "type": "string",
+                "example": "Y30001",
+                "description": "Target Machine Serial which registered in Machine information"
+              },
+              "DisplayMessageCommandInfo": {
+                "type": "object",
+                "required": [
+                  "MessageString",
+                  "ErrorType"
+                ],
+                "properties": {
+                  "MessageString": {
+                    "type": "string",
+                    "example": "This is Host Machine Stop Error",
+                    "description": "Error Message to be Displayed on Machine"
+                  },
+                  "ErrorType": {
+                    "type": "integer",
+                    "enum": [
+                      0,
+                      1,
+                      2
+                    ],
+                    "example": 2,
+                    "description": "ErrorType: 0 = Info, 1 = Warning, 2 = Error"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-CUR-Request": {
+        "type": "object",
+        "required": [
+          "TargetMachine",
+          "TargetOperation",
+          "Params"
+        ],
+        "properties": {
+          "TargetMachine": {
+            "type": "string",
+            "example": "Y45074",
+            "description": "Target Machine Serial which registered in Machine information"
+          },
+          "TargetOperation": {
+            "type": "string",
+            "example": "CUR",
+            "description": "Target Operation Name"
+          },
+          "Params": {
+            "type": "object",
+            "description": "Must be an empty object `{}`.",
+            "example": {}
+          }
+        }
+      },
+      "MachineOperationCommand-ORIGIN-Request": {
+        "type": "object",
+        "required": [
+          "TargetMachine",
+          "TargetOperation",
+          "Params"
+        ],
+        "properties": {
+          "TargetMachine": {
+            "type": "string",
+            "example": "Y45074",
+            "description": "Target Machine Serial which is registered in Machine information"
+          },
+          "TargetOperation": {
+            "type": "string",
+            "example": "ORIGIN",
+            "description": "Target Operation Name"
+          },
+          "Params": {
+            "type": "object",
+            "description": "Must be an empty object `{}`.",
+            "example": {}
+          }
+        }
+      },
+      "MachineOperationCommand-RUN-Request": {
+        "type": "object",
+        "required": [
+          "TargetMachine",
+          "TargetOperation",
+          "Params"
+        ],
+        "properties": {
+          "TargetMachine": {
+            "type": "string",
+            "example": "Y45074",
+            "description": "Target Machine Serial registered in machine information"
+          },
+          "TargetOperation": {
+            "type": "string",
+            "example": "RUN",
+            "description": "Target Operation Name"
+          },
+          "Params": {
+            "type": "object",
+            "required": [
+              "Lane"
+            ],
+            "properties": {
+              "Lane": {
+                "type": "integer",
+                "example": 1,
+                "description": "Lane: 0 = All Lane, 1 = Lane1, 2 = Lane2"
+              }
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-STOP-Request": {
+        "type": "object",
+        "required": [
+          "TargetMachine",
+          "TargetOperation",
+          "Params"
+        ],
+        "properties": {
+          "TargetMachine": {
+            "type": "string",
+            "example": "Y45074",
+            "description": "Target Machine Serial which is registered in Machine information"
+          },
+          "TargetOperation": {
+            "type": "string",
+            "example": "STOP",
+            "description": "Target Operation Name"
+          },
+          "Params": {
+            "type": "object",
+            "required": [
+              "Lane"
+            ],
+            "properties": {
+              "Lane": {
+                "type": "integer",
+                "example": 1,
+                "description": "Lane: 0 = All Lane, 1 = Lane1, 2 = Lane2"
+              }
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-RESET-Request": {
+        "type": "object",
+        "required": [
+          "TargetMachine",
+          "TargetOperation",
+          "Params"
+        ],
+        "properties": {
+          "TargetMachine": {
+            "type": "string",
+            "example": "Y45074",
+            "description": "Target Machine Serial which is registered in Machine information"
+          },
+          "TargetOperation": {
+            "type": "string",
+            "example": "RESET",
+            "description": "Target Operation Name"
+          },
+          "Params": {
+            "type": "object",
+            "required": [
+              "Lane"
+            ],
+            "properties": {
+              "Lane": {
+                "type": "integer",
+                "example": 1,
+                "description": "Lane: 0 = All Lane, 1 = Lane1, 2 = Lane2"
+              }
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-ERRCLEAR-Request": {
+        "type": "object",
+        "required": [
+          "TargetMachine",
+          "TargetOperation",
+          "Params"
+        ],
+        "properties": {
+          "TargetMachine": {
+            "type": "string",
+            "example": "Y45074",
+            "description": "Target Machine Serial which registered in Machine information"
+          },
+          "TargetOperation": {
+            "type": "string",
+            "example": "ERRCLEAR",
+            "description": "Target Operation Name"
+          },
+          "Params": {
+            "type": "object",
+            "required": [
+              "DialogAction"
+            ],
+            "properties": {
+              "DialogAction": {
+                "type": "string",
+                "enum": [
+                  "YES",
+                  "NO",
+                  "CANCEL"
+                ],
+                "example": "YES",
+                "description": "DialogAction Parameter can have following values - \"YES\", \"NO\", \"CANCEL\""
+              }
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-SWI-Request": {
+        "type": "object",
+        "required": [
+          "TargetMachine",
+          "TargetOperation",
+          "Params"
+        ],
+        "properties": {
+          "TargetMachine": {
+            "type": "string",
+            "example": "Y45074",
+            "description": "Target Machine Serial which registered in Machine information"
+          },
+          "TargetOperation": {
+            "type": "string",
+            "example": "SWI",
+            "description": "Target Operation Name"
+          },
+          "Params": {
+            "type": "object",
+            "required": [
+              "DataClassification",
+              "PcbDisposeOption",
+              "Lane",
+              "ProgramName",
+              "ProgramName2"
+            ],
+            "properties": {
+              "DataClassification": {
+                "type": "string",
+                "enum": [
+                  "VIOS",
+                  "XML",
+                  "TXT",
+                  "YGX",
+                  "YGZ"
+                ],
+                "example": "YGX",
+                "description": "DataClassification field can have following values - \"VIOS\" , \"XML\" , \"TXT\", \"YGX\", \"YGZ\""
+              },
+              "PcbDisposeOption": {
+                "type": "string",
+                "example": "ReturnError",
+                "enum": [
+                  "ReturnError",
+                  "Scrap",
+                  "Preserve"
+                ],
+                "description": "PcbDisposeOption field can have following values - \"ReturnError\", \"Scrap\", \"Preserve\""
+              },
+              "Lane": {
+                "type": "integer",
+                "example": 0,
+                "description": "Lane: 0 = All Lane, 1 = Lane1, 2 = Lane2"
+              },
+              "ProgramName": {
+                "type": "string",
+                "example": "SampleLane1",
+                "description": "ProgramName used as PCB Name"
+              },
+              "ProgramName2": {
+                "type": "string",
+                "example": "SampleLane2",
+                "description": "ProgramName2 used as PCB Name for Dual Lane machine"
+              }
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-READEX-Request": {
+        "type": "object",
+        "required": [
+          "TargetMachine",
+          "TargetOperation",
+          "Params"
+        ],
+        "properties": {
+          "TargetMachine": {
+            "type": "string",
+            "example": "Y45074",
+            "description": "Target Machine Serial which registered in Machine information"
+          },
+          "TargetOperation": {
+            "type": "string",
+            "example": "READEX",
+            "description": "Target Operation Name"
+          },
+          "Params": {
+            "type": "object",
+            "required": [
+              "DataClassification",
+              "DataClassification2",
+              "Lane",
+              "ProgramName"
+            ],
+            "properties": {
+              "DataClassification": {
+                "type": "string",
+                "enum": [
+                  "VIOS",
+                  "XML",
+                  "TXT",
+                  "YGX",
+                  "YGZ"
+                ],
+                "example": "YGX",
+                "description": "DataClassification field can have following values - \"VIOS\" , \"XML\" , \"TXT\", \"YGX\", \"YGZ\""
+              },
+              "DataClassification2": {
+                "type": "string",
+                "enum": [
+                  "IBMF",
+                  "CD",
+                  "TD",
+                  "FDX",
+                  "MDX",
+                  "PIX",
+                  "PI"
+                ],
+                "example": "IBMF",
+                "description": "DataClassification2 field can have following values - \"IBMF\", \"CD\" , \"TD\", \"FDX\" , \"MDX\" , \"PIX\" , \"PI\""
+              },
+              "Lane": {
+                "type": "integer",
+                "example": 1,
+                "description": "Lane: 0 = All Lane, 1 = Lane1, 2 = Lane2"
+              },
+              "ProgramName": {
+                "type": "string",
+                "example": "SampleLane1",
+                "description": "ProgramName used as PCB Name"
+              }
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-WRITEEX-Request": {
+        "type": "object",
+        "required": [
+          "TargetMachine",
+          "TargetOperation",
+          "Params"
+        ],
+        "properties": {
+          "TargetMachine": {
+            "type": "string",
+            "example": "Y45074",
+            "description": "Target Machine Serial which registered in Machine information"
+          },
+          "TargetOperation": {
+            "type": "string",
+            "example": "WRITEEX",
+            "description": "Target Operation Name"
+          },
+          "Params": {
+            "type": "object",
+            "required": [
+              "DataClassification",
+              "DataClassification2",
+              "Lane",
+              "ProgramName",
+              "ProgramData"
+            ],
+            "properties": {
+              "DataClassification": {
+                "type": "string",
+                "enum": [
+                  "VIOS",
+                  "XML",
+                  "TXT",
+                  "YGX",
+                  "YGZ"
+                ],
+                "example": "YGX",
+                "description": "DataClassification field can have following values - \"VIOS\" , \"XML\" , \"TXT\", \"YGX\", \"YGZ\""
+              },
+              "DataClassification2": {
+                "type": "string",
+                "enum": [
+                  "IBMF",
+                  "CD",
+                  "TD",
+                  "FDX",
+                  "MDX",
+                  "PIX",
+                  "PI"
+                ],
+                "example": "IBMF",
+                "description": "DataClassification2 field can have following values - \"IBMF\", \"CD\" , \"TD\", \"FDX\" , \"MDX\" , \"PIX\" , \"PI\""
+              },
+              "Lane": {
+                "type": "integer",
+                "example": 1,
+                "description": "Lane: 0 = All Lane, 1 = Lane1, 2 = Lane2"
+              },
+              "ProgramName": {
+                "type": "string",
+                "example": "SampleLane1",
+                "description": "ProgramName used as PCB Name"
+              },
+              "ProgramData": {
+                "type": "string",
+                "example": "0000111000100001100000",
+                "description": "ProgramData used as Board data information received in Buffer format"
+              }
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-UPDATE_PARTS_REMAIN-Request": {
+        "type": "object",
+        "required": [
+          "TargetMachine",
+          "TargetOperation",
+          "Params"
+        ],
+        "properties": {
+          "TargetMachine": {
+            "type": "string",
+            "example": "Y45074",
+            "description": "Target Machine Serial which registered in Machine information"
+          },
+          "TargetOperation": {
+            "type": "string",
+            "example": "UPDATE_PARTS_REMAIN",
+            "description": "Target Operation Name"
+          },
+          "Params": {
+            "type": "object",
+            "properties": {
+              "UpdatePartsRemain": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "Operation",
+                    "CmpID",
+                    "UniqueID",
+                    "Count",
+                    "SetNum"
+                  ],
+                  "properties": {
+                    "Operation": {
+                      "type": "integer",
+                      "enum": [
+                        0,
+                        1,
+                        2
+                      ],
+                      "example": 2,
+                      "description": "Operation field can have following values - 0, 1, 2"
+                    },
+                    "CmpID": {
+                      "type": "string",
+                      "example": "PARTS001",
+                      "description": "Part ID"
+                    },
+                    "UniqueID": {
+                      "type": "string",
+                      "example": "REEL001",
+                      "description": "Reel ID"
+                    },
+                    "Count": {
+                      "type": "integer",
+                      "example": 3000,
+                      "description": "Number of parts"
+                    },
+                    "SetNum": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "Set number of machine"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-REGISTER_PARTS-Request": {
+        "type": "object",
+        "required": [
+          "TargetMachine",
+          "TargetOperation",
+          "Params"
+        ],
+        "properties": {
+          "TargetMachine": {
+            "type": "string",
+            "example": "Y45074",
+            "description": "Target Machine Serial which registered in Machine information"
+          },
+          "TargetOperation": {
+            "type": "string",
+            "example": "REGISTER_PARTS",
+            "description": "Target Operation Name"
+          },
+          "Params": {
+            "type": "object",
+            "properties": {
+              "RegisterParts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "CmpID",
+                    "CmpName",
+                    "FeederType",
+                    "Quantity",
+                    "RemainWarning",
+                    "RemainWarningCount",
+                    "RemainStop",
+                    "RemainStopCount",
+                    "DetectKnot",
+                    "DetectKnotArea",
+                    "DetectKnotCount"
+                  ],
+                  "properties": {
+                    "CmpID": {
+                      "type": "string",
+                      "example": "PARTS001",
+                      "description": "CmpID"
+                    },
+                    "CmpName": {
+                      "type": "string",
+                      "example": "PARTS001",
+                      "description": "CmpName"
+                    },
+                    "FeederType": {
+                      "type": "integer",
+                      "example": 0,
+                      "description": "FeederType(0~)"
+                    },
+                    "Quantity": {
+                      "type": "integer",
+                      "example": 5000,
+                      "description": "Number of items"
+                    },
+                    "RemainWarning": {
+                      "type": "integer",
+                      "enum": [
+                        0,
+                        1
+                      ],
+                      "example": 1,
+                      "description": "Remaining Warning: 0 = Not used, 1 = Used"
+                    },
+                    "RemainWarningCount": {
+                      "type": "integer",
+                      "example": 300,
+                      "description": "Number of warnings remaining"
+                    },
+                    "RemainStop": {
+                      "type": "integer",
+                      "enum": [
+                        0,
+                        1
+                      ],
+                      "example": 1,
+                      "description": "Remaining Stop: 0 = Not used, 1 = Used"
+                    },
+                    "RemainStopCount": {
+                      "type": "integer",
+                      "example": -10,
+                      "description": "Remaining number of stops"
+                    },
+                    "DetectKnot": {
+                      "type": "integer",
+                      "enum": [
+                        0,
+                        1
+                      ],
+                      "example": 1,
+                      "description": "Joint detection: 0 = Not used, 1 = Used"
+                    },
+                    "DetectKnotArea": {
+                      "type": "integer",
+                      "example": 50,
+                      "description": "Joint detection range"
+                    },
+                    "DetectKnotCount": {
+                      "type": "integer",
+                      "example": 2,
+                      "description": "Number of joints detected"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-REMOTE_SCAN-Request": {
+        "type": "object",
+        "required": [
+          "TargetMachine",
+          "TargetOperation",
+          "Params"
+        ],
+        "properties": {
+          "TargetMachine": {
+            "type": "string",
+            "example": "Y45074",
+            "description": "Target Machine Serial which registered in Machine information"
+          },
+          "TargetOperation": {
+            "type": "string",
+            "example": "REMOTE_SCAN",
+            "description": "Target Operation Name"
+          },
+          "Params": {
+            "type": "object",
+            "required": [
+              "Operation",
+              "RemoteResult",
+              "Params"
+            ],
+            "properties": {
+              "Operation": {
+                "type": "integer",
+                "example": 0,
+                "description": "Operation: 0 = PartsSetup, 1 = Splicing, 2 = MagazineSetup"
+              },
+              "RemoteResult": {
+                "type": "string",
+                "example": "OK",
+                "description": "Validation result from MES"
+              },
+              "Params": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "0",
+                  "ZSY-008-123456",
+                  "1000"
+                ],
+                "description": "List of parameters"
+              }
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-LOCK_PANEL-Request": {
+        "type": "object",
+        "required": [
+          "TargetMachine",
+          "TargetOperation",
+          "Params"
+        ],
+        "properties": {
+          "TargetMachine": {
+            "type": "string",
+            "example": "Y67683",
+            "description": "Target Machine Serial which registered in Machine information"
+          },
+          "TargetOperation": {
+            "type": "string",
+            "example": "LOCK_PANEL",
+            "description": "Target Operation Name"
+          },
+          "Params": {
+            "type": "object",
+            "required": [
+              "Lock"
+            ],
+            "properties": {
+              "Lock": {
+                "type": "integer",
+                "example": 0,
+                "minimum": 0,
+                "maximum": 4294967295,
+                "description": "Lock Flag:\n  - 0 = Unlock\n  - 1 = Lock\n  - 2 ~ 4294967295 = Reserved or other lock states\n"
+              }
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-BLOCK_PARTS-Request": {
+        "type": "object",
+        "required": [
+          "TargetMachine",
+          "TargetOperation",
+          "Params"
+        ],
+        "properties": {
+          "TargetMachine": {
+            "type": "string",
+            "example": "Y67683",
+            "description": "Target Machine Serial which registered in Machine information"
+          },
+          "TargetOperation": {
+            "type": "string",
+            "example": "BLOCK_PARTS",
+            "description": "Target Operation Name"
+          },
+          "Params": {
+            "type": "object",
+            "required": [
+              "MaterialPackages"
+            ],
+            "properties": {
+              "MaterialPackages": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "REEL001",
+                  "REEL002",
+                  "REEL003"
+                ],
+                "description": "An array containing a list of Reel ID, Stick ID or Tray ID to block"
+              }
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-UNBLOCK_PARTS-Request": {
+        "type": "object",
+        "required": [
+          "TargetMachine",
+          "TargetOperation",
+          "Params"
+        ],
+        "properties": {
+          "TargetMachine": {
+            "type": "string",
+            "example": "Y67683",
+            "description": "Target Machine Serial which is registered in machine information"
+          },
+          "TargetOperation": {
+            "type": "string",
+            "example": "UNBLOCK_PARTS",
+            "description": "Target Operation Name"
+          },
+          "Params": {
+            "type": "object",
+            "required": [
+              "MaterialPackages"
+            ],
+            "properties": {
+              "MaterialPackages": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "REEL001",
+                  "REEL002"
+                ],
+                "description": "An array containing Reel IDs, Stick IDs, or Tray IDs to unblock"
+              }
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-BLOCK_LOCATIONS-Request": {
+        "type": "object",
+        "required": [
+          "TargetMachine",
+          "TargetOperation",
+          "Params"
+        ],
+        "properties": {
+          "TargetMachine": {
+            "type": "string",
+            "example": "Y67683",
+            "description": "Target Machine Serial which registered in Machine information"
+          },
+          "TargetOperation": {
+            "type": "string",
+            "example": "BLOCK_LOCATIONS",
+            "description": "Target Operation Name"
+          },
+          "Params": {
+            "type": "object",
+            "required": [
+              "MaterialLocations"
+            ],
+            "properties": {
+              "MaterialLocations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "CarrierID": {
+                      "type": "string",
+                      "example": "Cart001",
+                      "description": "Cart ID, Magazine ID or null of set location"
+                    },
+                    "SetNo": {
+                      "type": "integer",
+                      "example": 45,
+                      "description": "Set number in the cart/magazine if CarrierID is given, or in the whole machine if CarrierID is null."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-UNBLOCK_LOCATIONS-Request": {
+        "type": "object",
+        "required": [
+          "TargetMachine",
+          "TargetOperation",
+          "Params"
+        ],
+        "properties": {
+          "TargetMachine": {
+            "type": "string",
+            "example": "Y67683",
+            "description": "Target Machine Serial registered in Machine information"
+          },
+          "TargetOperation": {
+            "type": "string",
+            "example": "UNBLOCK_LOCATIONS",
+            "description": "Target Operation Name"
+          },
+          "Params": {
+            "type": "object",
+            "required": [
+              "MaterialLocations"
+            ],
+            "properties": {
+              "MaterialLocations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "CarrierID": {
+                      "type": "string",
+                      "example": "Cart001",
+                      "description": "Cart ID, Magazine ID or null of set location"
+                    },
+                    "SetNo": {
+                      "type": "integer",
+                      "example": 45,
+                      "description": "Set number in the cart/magazine if CarrierID is given, or in the whole machine if CarrierID is null."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-Request": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "CommandInfo"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MachineOperationCommand",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20200225174901000",
+            "description": "Format of Trace data - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "CommandInfo": {
+            "oneOf": [
+              {
+                "title": "CUR Request",
+                "$ref": "#/components/schemas/MachineOperationCommand-CUR-Request"
+              },
+              {
+                "title": "ORIGIN Request",
+                "$ref": "#/components/schemas/MachineOperationCommand-ORIGIN-Request"
+              },
+              {
+                "title": "RUN Request",
+                "$ref": "#/components/schemas/MachineOperationCommand-RUN-Request"
+              },
+              {
+                "title": "STOP Request",
+                "$ref": "#/components/schemas/MachineOperationCommand-STOP-Request"
+              },
+              {
+                "title": "RESET Request",
+                "$ref": "#/components/schemas/MachineOperationCommand-RESET-Request"
+              },
+              {
+                "title": "ERRCLEAR Request",
+                "$ref": "#/components/schemas/MachineOperationCommand-ERRCLEAR-Request"
+              },
+              {
+                "title": "SWI Request",
+                "$ref": "#/components/schemas/MachineOperationCommand-SWI-Request"
+              },
+              {
+                "title": "READEX Request",
+                "$ref": "#/components/schemas/MachineOperationCommand-READEX-Request"
+              },
+              {
+                "title": "WRITEEX Request",
+                "$ref": "#/components/schemas/MachineOperationCommand-WRITEEX-Request"
+              },
+              {
+                "title": "UPDATE_PARTS_REMAIN Request",
+                "$ref": "#/components/schemas/MachineOperationCommand-UPDATE_PARTS_REMAIN-Request"
+              },
+              {
+                "title": "REGISTER_PARTS Request",
+                "$ref": "#/components/schemas/MachineOperationCommand-REGISTER_PARTS-Request"
+              },
+              {
+                "title": "REMOTE_SCAN Request",
+                "$ref": "#/components/schemas/MachineOperationCommand-REMOTE_SCAN-Request"
+              },
+              {
+                "title": "LOCK_PANEL Request",
+                "$ref": "#/components/schemas/MachineOperationCommand-LOCK_PANEL-Request"
+              },
+              {
+                "title": "BLOCK_PARTS Request",
+                "$ref": "#/components/schemas/MachineOperationCommand-BLOCK_PARTS-Request"
+              },
+              {
+                "title": "UNBLOCK_PARTS Request",
+                "$ref": "#/components/schemas/MachineOperationCommand-UNBLOCK_PARTS-Request"
+              },
+              {
+                "title": "BLOCK_LOCATIONS Request",
+                "$ref": "#/components/schemas/MachineOperationCommand-BLOCK_LOCATIONS-Request"
+              },
+              {
+                "title": "UNBLOCK_LOCATIONS Request",
+                "$ref": "#/components/schemas/MachineOperationCommand-UNBLOCK_LOCATIONS-Request"
+              }
+            ],
+            "discriminator": {
+              "propertyName": "TargetOperation",
+              "mapping": {
+                "CUR": "#/components/schemas/MachineOperationCommand-CUR-Request",
+                "ORIGIN": "#/components/schemas/MachineOperationCommand-ORIGIN-Request",
+                "RUN": "#/components/schemas/MachineOperationCommand-RUN-Request",
+                "STOP": "#/components/schemas/MachineOperationCommand-STOP-Request",
+                "RESET": "#/components/schemas/MachineOperationCommand-RESET-Request",
+                "ERRCLEAR": "#/components/schemas/MachineOperationCommand-ERRCLEAR-Request",
+                "SWI": "#/components/schemas/MachineOperationCommand-SWI-Request",
+                "READEX": "#/components/schemas/MachineOperationCommand-READEX-Request",
+                "WRITEEX": "#/components/schemas/MachineOperationCommand-WRITEEX-Request",
+                "UPDATE_PARTS_REMAIN": "#/components/schemas/MachineOperationCommand-UPDATE_PARTS_REMAIN-Request",
+                "REGISTER_PARTS": "#/components/schemas/MachineOperationCommand-REGISTER_PARTS-Request",
+                "REMOTE_SCAN": "#/components/schemas/MachineOperationCommand-REMOTE_SCAN-Request",
+                "LOCK_PANEL": "#/components/schemas/MachineOperationCommand-LOCK_PANEL-Request",
+                "BLOCK_PARTS": "#/components/schemas/MachineOperationCommand-BLOCK_PARTS-Request",
+                "UNBLOCK_PARTS": "#/components/schemas/MachineOperationCommand-UNBLOCK_PARTS-Request",
+                "BLOCK_LOCATIONS": "#/components/schemas/MachineOperationCommand-BLOCK_LOCATIONS-Request",
+                "UNBLOCK_LOCATIONS": "#/components/schemas/MachineOperationCommand-UNBLOCK_LOCATIONS-Request"
+              }
+            }
+          }
+        }
+      },
+      "DisplayMessage-Response": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TargetMachine",
+          "ReciptNumber",
+          "Result",
+          "ResultMessage"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "DisplayMessage",
+            "description": "Function name of JSON"
+          },
+          "TargetMachine": {
+            "type": "string",
+            "example": "Y45074",
+            "description": "Target Machine Serial same as requested by MES"
+          },
+          "ReciptNumber": {
+            "type": "string",
+            "format": "uuid",
+            "example": "e1ca8fcf-b91c-48bc-9d71-4a92e6b10056",
+            "description": "Unique ID(uuid)"
+          },
+          "Result": {
+            "type": "integer",
+            "example": 1,
+            "description": "Result Code of request reception: 1 = Success, 2 = Failure"
+          },
+          "ResultMessage": {
+            "type": "string",
+            "example": "1001: Request Validation Success",
+            "description": "Command reception result message",
+            "enum": [
+              "1001: Request Validation Success",
+              "1002: Unrecognized MES",
+              "1003: API Server Name and IP Address does not match",
+              "1004: Unauthenticated",
+              "1005: MES Status Not Enabled at YRS",
+              "1006: Parameter Error",
+              "1007: Relay Common Offline",
+              "1008: Target Machine Not Registered",
+              "1009: Target Machine Offline",
+              "1010: Internal System Error",
+              "1011: Request Timeout at YRS",
+              "1012: Server returned Error Status Code",
+              "1013: Amqp Disconnect",
+              "1014: Requested Machine Serial does not match for requested command",
+              "1015: Invalid or Not Supported Command",
+              "1016: Command Response Timeout at Machine Side",
+              "1017: Retry Limit Reached for Sending Command to Machine",
+              "1018: Invalid Execution Result",
+              "1019: Unable to connect to Target MES",
+              "1020: Request Timeout at MES"
+            ]
+          }
+        }
+      },
+      "MachineOperationCommand-Response": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TargetMachine",
+          "ReciptNumber",
+          "Result",
+          "ResultMessage",
+          "TargetOperation"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MachineOperationCommand",
+            "description": "Function name of JSON"
+          },
+          "TargetMachine": {
+            "type": "string",
+            "example": "Y45074",
+            "description": "Target Machine Serial same as requested by MES"
+          },
+          "ReciptNumber": {
+            "type": "string",
+            "format": "uuid",
+            "example": "e1ca8fcf-b91c-48bc-9d71-4a92e6b10056",
+            "description": "Unique ID(uuid)"
+          },
+          "Result": {
+            "type": "integer",
+            "example": 1,
+            "description": "Result Code of request reception: 1 = Success, 2 = Failure"
+          },
+          "ResultMessage": {
+            "type": "string",
+            "example": "1001: Request Validation Success",
+            "description": "Command reception result message",
+            "enum": [
+              "1001: Request Validation Success",
+              "1002: Unrecognized MES",
+              "1003: API Server Name and IP Address does not match",
+              "1004: Unauthenticated",
+              "1005: MES Status Not Enabled at YRS",
+              "1006: Parameter Error",
+              "1007: Relay Common Offline",
+              "1008: Target Machine Not Registered",
+              "1009: Target Machine Offline",
+              "1010: Internal System Error",
+              "1011: Request Timeout at YRS",
+              "1012: Server returned Error Status Code",
+              "1013: Amqp Disconnect",
+              "1014: Requested Machine Serial does not match for requested command",
+              "1015: Invalid or Not Supported Command",
+              "1016: Command Response Timeout at Machine Side",
+              "1017: Retry Limit Reached for Sending Command to Machine",
+              "1018: Invalid Execution Result",
+              "1019: Unable to connect to Target MES",
+              "1020: Request Timeout at MES"
+            ]
+          },
+          "TargetOperation": {
+            "type": "string",
+            "enum": [
+              "CUR",
+              "ORIGIN",
+              "RUN",
+              "STOP",
+              "RESET",
+              "ERRCLEAR",
+              "READEX",
+              "WRITEEX",
+              "UPDATE_PARTS_REMAIN",
+              "SWI",
+              "REGISTER_PARTS",
+              "REMOTE_SCAN",
+              "LOCK_PANEL",
+              "BLOCK_PARTS",
+              "UNBLOCK_PARTS",
+              "BLOCK_LOCATIONS",
+              "UNBLOCK_LOCATIONS"
+            ],
+            "example": "CUR",
+            "description": "Target command requested from MES to be sent to Machine"
+          }
+        }
+      }
+    },
+    "examples": {
+      "DisplayMessage-Request": {
+        "summary": "DisplayMessage Request",
+        "description": "Example request for displaying a message on the target machine",
+        "value": {
+          "FuncName": "DisplayMessage",
+          "TraceDate": "20200225174901000",
+          "CommandInfo": {
+            "TargetMachine": "Y30001",
+            "DisplayMessageCommandInfo": {
+              "MessageString": "This is Host Machine Stop Error",
+              "ErrorType": 2
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-CUR": {
+        "summary": "MachineOperationCommand - CUR",
+        "description": "Example request for CUR operation",
+        "value": {
+          "FuncName": "MachineOperationCommand",
+          "TraceDate": "20200225174901000",
+          "CommandInfo": {
+            "TargetMachine": "Y45074",
+            "TargetOperation": "CUR",
+            "Params": {}
+          }
+        }
+      },
+      "MachineOperationCommand-ORIGIN": {
+        "summary": "MachineOperationCommand - ORIGIN",
+        "description": "Example request for ORIGIN operation",
+        "value": {
+          "FuncName": "MachineOperationCommand",
+          "TraceDate": "20200225174901000",
+          "CommandInfo": {
+            "TargetMachine": "Y45074",
+            "TargetOperation": "ORIGIN",
+            "Params": {}
+          }
+        }
+      },
+      "MachineOperationCommand-RUN": {
+        "summary": "MachineOperationCommand - RUN",
+        "description": "Example request for RUN operation",
+        "value": {
+          "FuncName": "MachineOperationCommand",
+          "TraceDate": "20200225174901000",
+          "CommandInfo": {
+            "TargetMachine": "Y45074",
+            "TargetOperation": "RUN",
+            "Params": {
+              "Lane": 1
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-STOP": {
+        "summary": "MachineOperationCommand - STOP",
+        "description": "Example request for STOP operation",
+        "value": {
+          "FuncName": "MachineOperationCommand",
+          "TraceDate": "20200225174901000",
+          "CommandInfo": {
+            "TargetMachine": "Y45074",
+            "TargetOperation": "STOP",
+            "Params": {
+              "Lane": 1
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-RESET": {
+        "summary": "MachineOperationCommand - RESET",
+        "description": "Example request for RESET operation",
+        "value": {
+          "FuncName": "MachineOperationCommand",
+          "TraceDate": "20200225174901000",
+          "CommandInfo": {
+            "TargetMachine": "Y45074",
+            "TargetOperation": "RESET",
+            "Params": {
+              "Lane": 1
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-ERRCLEAR": {
+        "summary": "MachineOperationCommand - ERRCLEAR",
+        "description": "Example request for ERRCLEAR operation",
+        "value": {
+          "FuncName": "MachineOperationCommand",
+          "TraceDate": "20200225174901000",
+          "CommandInfo": {
+            "TargetMachine": "Y45074",
+            "TargetOperation": "ERRCLEAR",
+            "Params": {
+              "DialogAction": "YES"
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-SWI": {
+        "summary": "MachineOperationCommand - SWI",
+        "description": "Example request for SWI operation",
+        "value": {
+          "FuncName": "MachineOperationCommand",
+          "TraceDate": "20200225174901000",
+          "CommandInfo": {
+            "TargetMachine": "Y45074",
+            "TargetOperation": "SWI",
+            "Params": {
+              "DataClassification": "YGX",
+              "PcbDisposeOption": "ReturnError",
+              "Lane": 0,
+              "ProgramName": "SampleLane1",
+              "ProgramName2": "SampleLane2"
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-READEX": {
+        "summary": "MachineOperationCommand - READEX",
+        "description": "Example request for READEX operation",
+        "value": {
+          "FuncName": "MachineOperationCommand",
+          "TraceDate": "20200225174901000",
+          "CommandInfo": {
+            "TargetMachine": "Y45074",
+            "TargetOperation": "READEX",
+            "Params": {
+              "DataClassification": "YGX",
+              "DataClassification2": "IBMF",
+              "Lane": 1,
+              "ProgramName": "SampleLane1"
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-WRITEEX": {
+        "summary": "MachineOperationCommand - WRITEEX",
+        "description": "Example request for WRITEEX operation",
+        "value": {
+          "FuncName": "MachineOperationCommand",
+          "TraceDate": "20200225174901000",
+          "CommandInfo": {
+            "TargetMachine": "YM300",
+            "TargetOperation": "WRITEEX",
+            "Params": {
+              "DataClassification": "YGX",
+              "DataClassification2": "IBMF",
+              "Lane": 1,
+              "ProgramName": "SampleLane1",
+              "ProgramData": "[Buffer]"
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-UPDATE_PARTS_REMAIN": {
+        "summary": "MachineOperationCommand - UPDATE_PARTS_REMAIN",
+        "description": "Example request for UPDATE_PARTS_REMAIN operation",
+        "value": {
+          "FuncName": "MachineOperationCommand",
+          "TraceDate": "20200225174901000",
+          "CommandInfo": {
+            "TargetMachine": "Y45074",
+            "TargetOperation": "UPDATE_PARTS_REMAIN",
+            "Params": {
+              "UpdatePartsRemain": [
+                {
+                  "Operation": 2,
+                  "CmpID": "PARTS001",
+                  "UniqueID": "REEL001",
+                  "Count": 3000,
+                  "SetNum": 1
+                },
+                {
+                  "Operation": 1,
+                  "CmpID": "PARTS002",
+                  "UniqueID": "REEL002",
+                  "Count": 3000,
+                  "SetNum": 0
+                }
+              ]
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-REGISTER_PARTS": {
+        "summary": "MachineOperationCommand - REGISTER_PARTS",
+        "description": "Example request for REGISTER_PARTS operation",
+        "value": {
+          "FuncName": "MachineOperationCommand",
+          "TraceDate": "20200225174901000",
+          "CommandInfo": {
+            "TargetMachine": "Y45074",
+            "TargetOperation": "REGISTER_PARTS",
+            "Params": {
+              "RegisterParts": [
+                {
+                  "CmpID": "PARTS001",
+                  "CmpName": "PARTS001",
+                  "FeederType": 0,
+                  "Quantity": 5000,
+                  "RemainWarning": 1,
+                  "RemainWarningCount": 300,
+                  "RemainStop": 1,
+                  "RemainStopCount": -10,
+                  "DetectKnot": 1,
+                  "DetectKnotArea": 50,
+                  "DetectKnotCount": 2
+                }
+              ]
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-REMOTE_SCAN": {
+        "summary": "MachineOperationCommand - REMOTE_SCAN",
+        "description": "Example request for REMOTE_SCAN operation",
+        "value": {
+          "FuncName": "MachineOperationCommand",
+          "TraceDate": "20200225174901000",
+          "CommandInfo": {
+            "TargetMachine": "Y45074",
+            "TargetOperation": "REMOTE_SCAN",
+            "Params": {
+              "Operation": 0,
+              "RemoteResult": "OK",
+              "Params": [
+                "0",
+                "ZSY-008-123456",
+                "40",
+                "PARTS001",
+                "REEL001",
+                "LotID",
+                "1000",
+                "",
+                "",
+                "",
+                "",
+                ""
+              ]
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-LOCK_PANEL": {
+        "summary": "MachineOperationCommand - LOCK_PANEL",
+        "value": {
+          "FuncName": "MachineOperationCommand",
+          "TraceDate": "20200225174901000",
+          "CommandInfo": {
+            "TargetMachine": "Y67683",
+            "TargetOperation": "LOCK_PANEL",
+            "Params": {
+              "Lock": 0
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-BLOCK_PARTS": {
+        "summary": "MachineOperationCommand - BLOCK_PARTS",
+        "description": "Example request for BLOCK_PARTS operation",
+        "value": {
+          "FuncName": "MachineOperationCommand",
+          "TraceDate": "20200225174901000",
+          "CommandInfo": {
+            "TargetMachine": "Y67683",
+            "TargetOperation": "BLOCK_PARTS",
+            "Params": {
+              "MaterialPackages": [
+                "REEL001",
+                "REEL002",
+                "REEL003"
+              ]
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-UNBLOCK_PARTS": {
+        "summary": "MachineOperationCommand - UNBLOCK_PARTS",
+        "value": {
+          "FuncName": "MachineOperationCommand",
+          "TraceDate": "20200225174901000",
+          "CommandInfo": {
+            "TargetMachine": "Y67683",
+            "TargetOperation": "UNBLOCK_PARTS",
+            "Params": {
+              "MaterialPackages": [
+                "REEL001",
+                "REEL002",
+                "REEL003"
+              ]
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-BLOCK_LOCATIONS": {
+        "summary": "MachineOperationCommand - BLOCK_LOCATIONS",
+        "value": {
+          "FuncName": "MachineOperationCommand",
+          "TraceDate": "20200225174901000",
+          "CommandInfo": {
+            "TargetMachine": "Y67683",
+            "TargetOperation": "BLOCK_LOCATIONS",
+            "Params": {
+              "MaterialLocations": [
+                {
+                  "CarrierID": "Cart001",
+                  "SetNo": 45
+                },
+                {
+                  "CarrierID": "Cart002",
+                  "SetNo": 46
+                }
+              ]
+            }
+          }
+        }
+      },
+      "MachineOperationCommand-UNBLOCK_LOCATIONS": {
+        "summary": "MachineOperationCommand - UNBLOCK_LOCATIONS",
+        "description": "Example request for UNBLOCK_LOCATIONS operation",
+        "value": {
+          "FuncName": "MachineOperationCommand",
+          "TraceDate": "20200225174901000",
+          "CommandInfo": {
+            "TargetMachine": "Y67683",
+            "TargetOperation": "UNBLOCK_LOCATIONS",
+            "Params": {
+              "MaterialLocations": [
+                {
+                  "CarrierID": "Cart001",
+                  "SetNo": 45
+                },
+                {
+                  "CarrierID": "Cart002",
+                  "SetNo": 46
+                }
+              ]
+            }
+          }
+        }
+      },
+      "DisplayMessage-Success-Response": {
+        "summary": "DisplayMessage Success Response",
+        "description": "DisplayMessage Request validation success at RestComm",
+        "value": {
+          "FuncName": "DisplayMessage",
+          "TargetMachine": "Y45074",
+          "ReciptNumber": "e1ca8fcf-b91c-48bc-9d71-4a92e6b10056",
+          "Result": 1,
+          "ResultMessage": "1001: Request Validation Success"
+        }
+      },
+      "DisplayMessage-Failure-Response": {
+        "summary": "DisplayMessage Failure Response",
+        "description": "DisplayMessage Request validation failure at RestComm",
+        "value": {
+          "FuncName": "DisplayMessage",
+          "TargetMachine": "Y45074",
+          "ReciptNumber": "e1ca8fcf-b91c-48bc-9d71-4a92e6b10056",
+          "Result": 2,
+          "ResultMessage": "1002: Unrecognized MES"
+        }
+      },
+      "MchOperationCmd-Success-Response": {
+        "summary": "MachineOperationCommand Success Response",
+        "description": "MchOperationCmd Request validation success at RestComm",
+        "value": {
+          "FuncName": "MachineOperationCommand",
+          "TargetMachine": "Y45074",
+          "ReciptNumber": "e1ca8fcf-b91c-48bc-9d71-4a92e6b10056",
+          "Result": 1,
+          "ResultMessage": "1001: Request Validation Success",
+          "TargetOperation": "REGISTER_PARTS"
+        }
+      },
+      "MchOperationCmd-Failure-Response": {
+        "summary": "MachineOperationCommand Failure Response",
+        "description": "MchOperationCmd Request validation failure at RestComm",
+        "value": {
+          "FuncName": "MachineOperationCommand",
+          "TargetMachine": "Y45074",
+          "ReciptNumber": "e1ca8fcf-b91c-48bc-9d71-4a92e6b10056",
+          "Result": 2,
+          "ResultMessage": "1002: Unrecognized MES",
+          "TargetOperation": "REGISTER_PARTS"
+        }
+      }
+    }
+  }
+}

@@ -38,5 +38,21 @@
   "skip_duplicates": true,
   "poll_seconds": 3,
   "stable_seconds": 2,
-  "ledger_path": "./linebridge_ledger.db"
+  "ledger_path": "./linebridge_ledger.db",
+  "ysup_database": "./ysup_materials.csv",
+  "ysup_fields": {
+    "part_number": true,
+    "reel_id": true,
+    "lot_id": false
+  },
+  "ysup_extra_fields": [],
+  "ysup_api_token": "",
+  "ysup_basic_username": "",
+  "ysup_basic_password": "",
+  "ysup_outbound_enabled": false,
+  "ysup_outbound_url": "",
+  "ysup_outbound_username": "",
+  "ysup_outbound_password": "",
+  "ysup_client_name": "LEAPTECH",
+  "ysup_machine_serial": ""
 }

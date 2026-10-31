@@ -3,11 +3,14 @@ LineBridge control panel - a local web UI served with the Python standard librar
 
     python -m linebridge ui --config config.json      -> http://127.0.0.1:8600
 """
-import hashlib
 import json
+import hashlib
 import logging
 import os
 import re
+import secrets
+import hmac
+import base64
 import string
 import tempfile
 import threading
@@ -19,6 +22,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from . import core
+from . import ysup
 
 STATIC = Path(__file__).parent / "static"
 log = logging.getLogger("linebridge")
@@ -51,6 +55,26 @@ class Controller:
         log.addHandler(self.logs)
         log.setLevel(logging.INFO)
         self._ledgers = {}
+        self.sessions = {}
+        self.auth_lock = threading.Lock()
+        if not self.cfg.get("admin_password_hash"):
+            password = secrets.token_urlsafe(12)
+            salt = secrets.token_bytes(16)
+            self.cfg["admin_password_salt"] = base64.b64encode(salt).decode("ascii")
+            self.cfg["admin_password_hash"] = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 310000).hex()
+            core.save_config(self.cfg, config_path)
+            log.warning("First-run Admin password: %s (change it after signing in)", password)
+
+    def check_password(self, password):
+        try:
+            salt = base64.b64decode(self.cfg["admin_password_salt"])
+            actual = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 310000).hex()
+            return hmac.compare_digest(actual, self.cfg["admin_password_hash"])
+        except (KeyError, ValueError):
+            return False
+
+    def public_config(self):
+        return {k: v for k, v in self.cfg.items() if k not in ("admin_password_hash", "admin_password_salt")}
 
     @property
     def running(self):
@@ -63,6 +87,8 @@ class Controller:
         return self._ledgers[p]
 
     def save(self, cfg):
+        cfg = {**cfg, **{k: self.cfg[k] for k in ("admin_password_hash", "admin_password_salt")
+                          if k in self.cfg}}
         self.cfg = core.normalize_config(cfg)
         core.save_config(self.cfg, self.config_path)
         log.info("Settings saved")
@@ -222,7 +248,7 @@ def test_shared(body):
         return {"ok": False, "message": f"Not writable: {e}"}
 
 
-def integration_check(body):
+def integration_check(body, base_dir=None):
     """Run a safe, operator-facing preflight for the complete integration path."""
     cfg = core.normalize_config(body.get("config") or {})
     checks = []
@@ -287,6 +313,28 @@ def integration_check(body):
             add("api", "Customer API delivery", True, "Configured; click Check again to send a test payload", "skipped")
     else:
         add("api", "Customer API delivery", True, "Disabled in this profile", "skipped")
+
+    ysup_db = Path(cfg.get("ysup_database") or "").expanduser()
+    if not ysup_db.is_absolute() and base_dir is not None:
+        ysup_db = Path(base_dir) / ysup_db
+    if ysup_db.exists():
+        try:
+            materials, _ = ysup.parse_database_csv(ysup_db.read_bytes())
+            add("ysup_database", "YSUP-Link material database", True,
+                f"{len(materials)} material record(s) in {ysup_db.resolve()}")
+        except Exception as e:
+            add("ysup_database", "YSUP-Link material database", False, str(e), "error")
+    else:
+        add("ysup_database", "YSUP-Link material database", True, "No database imported yet", "skipped")
+    if cfg.get("ysup_outbound_enabled"):
+        ready = bool(cfg.get("ysup_outbound_url") and cfg.get("ysup_client_name") and
+                     cfg.get("ysup_outbound_username") and cfg.get("ysup_outbound_password"))
+        add("ysup_outbound", "YSUP REST-MES callback", ready,
+            "URL, client-name, and Basic Auth credentials are required" if not ready else
+            "Configured; REMOTE_SCAN uses the request machine serial unless overridden",
+            "check" if ready else "error")
+    else:
+        add("ysup_outbound", "YSUP REST-MES callback", True, "Disabled in this profile", "skipped")
 
     add("archive", "Archive path ready", backup_folder.exists(), str(backup_folder.resolve()))
     failed = [c for c in checks if not c["ok"]]
@@ -462,13 +510,41 @@ def make_handler(ctl):
             n = int(self.headers.get("Content-Length") or 0)
             return json.loads(self.rfile.read(n) or b"{}")
 
+        def _session(self):
+            raw = self.headers.get("Cookie", "")
+            token = next((part.strip().split("=", 1)[1] for part in raw.split(";")
+                          if part.strip().startswith("linebridge_session=")), "")
+            expires = ctl.sessions.get(token, 0)
+            if expires < time.time():
+                ctl.sessions.pop(token, None)
+                return False
+            ctl.sessions[token] = time.time() + 8 * 60 * 60
+            return True
+
+        def _admin_only(self, path):
+            if path in ("/", "/index.html", "/api/login", "/api/logout", "/api/me", "/ysup/api"):
+                return True
+            return self._session()
+
         def do_GET(self):
             u = urlparse(self.path)
             q = parse_qs(u.query)
+            if u.path == "/api/me":
+                return self._send(200, {"authenticated": self._session(), "user": "Admin" if self._session() else None})
+            if not self._admin_only(u.path):
+                return self._send(401, {"error": "Admin login required"})
             if u.path in ("/", "/index.html"):
                 return self._send(200, (STATIC / "index.html").read_bytes(), "text/html; charset=utf-8")
             if u.path == "/api/config":
-                return self._send(200, ctl.cfg)
+                return self._send(200, ctl.public_config())
+            if u.path == "/api/ysup/database":
+                db_path = Path(ctl.cfg["ysup_database"])
+                if not db_path.is_absolute():
+                    db_path = Path(ctl.config_path).resolve().parent / db_path
+                if not db_path.exists():
+                    return self._send(200, {"exists": False, "records": 0})
+                records, mapping = ysup.parse_database_csv(db_path.read_bytes())
+                return self._send(200, {"exists": True, "records": len(records), "columns": mapping})
             if u.path == "/api/status":
                 return self._send(200, ctl.status(int(q.get("since", ["0"])[0])))
             if u.path == "/api/dirs":
@@ -507,6 +583,133 @@ def make_handler(ctl):
         def do_POST(self):
             try:
                 p = urlparse(self.path).path
+                if p == "/api/login":
+                    b = self._body()
+                    if str(b.get("username", "")).casefold() != "admin" or not ctl.check_password(str(b.get("password", ""))):
+                        return self._send(401, {"error": "Invalid Admin username or password"})
+                    token = secrets.token_urlsafe(32)
+                    ctl.sessions[token] = time.time() + 8 * 60 * 60
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Set-Cookie", f"linebridge_session={token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800")
+                    self.send_header("Content-Length", "11")
+                    self.end_headers()
+                    self.wfile.write(b'{"ok":true}')
+                    return
+                if p == "/api/logout":
+                    raw = self.headers.get("Cookie", "")
+                    token = next((part.strip().split("=", 1)[1] for part in raw.split(";")
+                                  if part.strip().startswith("linebridge_session=")), "")
+                    ctl.sessions.pop(token, None)
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Set-Cookie", "linebridge_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0")
+                    self.send_header("Content-Length", "11")
+                    self.end_headers()
+                    self.wfile.write(b'{"ok":true}')
+                    return
+                if p == "/ysup/api":
+                    if not self.headers.get("client-name", "").strip():
+                        return self._send(400, {"message": "Missing required client-name header", "data": None})
+                    if "application/json" not in self.headers.get("Content-Type", "").lower():
+                        return self._send(400, {"message": "Content-Type must be application/json", "data": None})
+                    expected = ctl.cfg.get("ysup_api_token", "")
+                    supplied = self.headers.get("X-YSUP-Token", "") or self.headers.get("Authorization", "").removeprefix("Bearer ")
+                    auth = self.headers.get("Authorization", "")
+                    basic_ok = False
+                    if auth.startswith("Basic "):
+                        try:
+                            user, password = base64.b64decode(auth[6:], validate=True).decode("utf-8").split(":", 1)
+                            expected_user, expected_password = ctl.cfg.get("ysup_basic_username", ""), ctl.cfg.get("ysup_basic_password", "")
+                            basic_ok = bool(expected_user or expected_password) and hmac.compare_digest(user, expected_user) and hmac.compare_digest(password, expected_password)
+                        except (ValueError, UnicodeError):
+                            basic_ok = False
+                    token_ok = bool(expected) and hmac.compare_digest(expected, supplied)
+                    configured_auth = bool(expected or ctl.cfg.get("ysup_basic_username") or ctl.cfg.get("ysup_basic_password"))
+                    if configured_auth and not (basic_ok or token_ok):
+                        return self._send(401, {"message": "Unauthenticated", "data": None})
+                    if not configured_auth and self.client_address[0] not in ("127.0.0.1", "::1"):
+                        return self._send(401, {"message": "Configure YSUP Basic Auth credentials for remote access", "data": None})
+                    raw = self.rfile.read(int(self.headers.get("Content-Length") or 0))
+                    try:
+                        payload = json.loads(raw or b"{}")
+                    except (ValueError, UnicodeError) as e:
+                        return self._send(400, {"message": "Incorrect Request Body Data", "data": str(e)})
+                    db_path = Path(ctl.cfg["ysup_database"])
+                    if not db_path.is_absolute():
+                        db_path = Path(ctl.config_path).resolve().parent / db_path
+                    if not db_path.exists():
+                        return self._send(503, {"message": "Material database has not been imported", "data": None})
+                    records, _ = ysup.parse_database_csv(db_path.read_bytes())
+                    try:
+                        response = ysup.verify(payload, records, ctl.cfg)
+                    except ValueError as e:
+                        unknown_function = str(e).startswith("Unsupported YSUP FuncName:")
+                        return self._send(404 if unknown_function else 400,
+                                          {"message": "FuncName not available in Request Body" if unknown_function else
+                                           "Incorrect Request Body Data", "data": str(e)})
+                    if ctl.cfg.get("ysup_outbound_enabled") and ctl.cfg.get("ysup_outbound_url"):
+                        # Send one REMOTE_SCAN result per scanned component before returning SetupRequest.
+                        if payload.get("FuncName") == "SetupRequest":
+                            import urllib.request
+                            out_user = ctl.cfg.get("ysup_outbound_username", "")
+                            out_password = ctl.cfg.get("ysup_outbound_password", "")
+                            encoded = base64.b64encode(f"{out_user}:{out_password}".encode("utf-8")).decode("ascii")
+                            machine_serial = ctl.cfg.get("ysup_machine_serial") or payload["MchInfo"]["MchSerial"]
+                            try:
+                                for set_index, set_info in enumerate(payload.get("SetInfos", [])):
+                                    for carrier_index, carrier in enumerate(set_info.get("CarrierInfos", [])):
+                                        carrier_ok = response["SetInfos"][set_index]["CarrierInfos"][carrier_index]["Result"] == 0
+                                        for component in carrier.get("CmpInfos", []):
+                                            outbound = ysup.remote_scan_component_payload(
+                                                machine_serial, carrier_ok,
+                                                carrier.get("SetNo", 0), component, records)
+                                            request = urllib.request.Request(ctl.cfg["ysup_outbound_url"],
+                                                data=json.dumps(outbound).encode("utf-8"), method="POST",
+                                                headers={"Content-Type": "application/json",
+                                                         "client-name": ctl.cfg.get("ysup_client_name", "LEAPTECH"),
+                                                         "Authorization": "Basic " + encoded})
+                                            with urllib.request.urlopen(request, timeout=20) as upstream:
+                                                answer = json.loads(upstream.read())
+                                            if answer.get("Result") != 1:
+                                                raise RuntimeError(answer.get("ResultMessage", "YSUP REST-MES rejected REMOTE_SCAN"))
+                            except Exception as e:
+                                return self._send(502, {"message": "YSUP REST-MES callback failed", "data": str(e)})
+                    return self._send(200, response)
+                if not self._admin_only(p):
+                    return self._send(401, {"error": "Admin login required"})
+                if p == "/api/change-password":
+                    b = self._body()
+                    if not ctl.check_password(str(b.get("current_password", ""))):
+                        return self._send(400, {"error": "Current password is incorrect"})
+                    new_password = str(b.get("new_password", ""))
+                    if len(new_password) < 12:
+                        return self._send(400, {"error": "New password must be at least 12 characters"})
+                    salt = secrets.token_bytes(16)
+                    ctl.cfg["admin_password_salt"] = base64.b64encode(salt).decode("ascii")
+                    ctl.cfg["admin_password_hash"] = hashlib.pbkdf2_hmac("sha256", new_password.encode(), salt, 310000).hex()
+                    core.save_config(ctl.cfg, ctl.config_path)
+                    ctl.sessions.clear()
+                    return self._send(200, {"ok": True, "message": "Password updated. Sign in again."})
+                if p == "/api/ysup/database":
+                    content_type = self.headers.get("Content-Type", "")
+                    if "multipart/form-data" in content_type:
+                        n = int(self.headers.get("Content-Length") or 0)
+                        parts = _parse_multipart(self.rfile.read(n), content_type)
+                        if "file" not in parts:
+                            return self._send(400, {"error": "Select a CSV file"})
+                        data = parts["file"][0]
+                    else:
+                        b = self._body()
+                        data = str(b.get("csv", "")).encode("utf-8")
+                    records, mapping = ysup.parse_database_csv(data)
+                    db_path = Path(ctl.cfg["ysup_database"])
+                    if not db_path.is_absolute():
+                        db_path = Path(ctl.config_path).resolve().parent / db_path
+                    db_path.parent.mkdir(parents=True, exist_ok=True)
+                    core.atomic_write(db_path, data)
+                    return self._send(200, {"ok": True, "records": len(records), "columns": mapping,
+                                             "path": str(db_path.resolve())})
                 if p == "/api/upload":
                     ctype_hdr = self.headers.get("Content-Type", "")
                     if "multipart/form-data" in ctype_hdr:
@@ -539,8 +742,10 @@ def make_handler(ctl):
                         return self._send(200, result)
                 b = self._body()
                 if p == "/api/config":
+                    b.pop("admin_password_hash", None)
+                    b.pop("admin_password_salt", None)
                     ctl.save(b)
-                    return self._send(200, {"ok": True, "config": ctl.cfg})
+                    return self._send(200, {"ok": True, "config": ctl.public_config()})
                 if p == "/api/start":
                     ctl.start()
                     return self._send(200, {"ok": True})
@@ -556,7 +761,7 @@ def make_handler(ctl):
                 if p == "/api/test-shared":
                     return self._send(200, test_shared(b))
                 if p == "/api/integration-check":
-                    return self._send(200, integration_check(b))
+                    return self._send(200, integration_check(b, Path(ctl.config_path).resolve().parent))
                 self._send(404, {"error": "not found"})
             except Exception as e:
                 log.error("UI request failed: %s", e)

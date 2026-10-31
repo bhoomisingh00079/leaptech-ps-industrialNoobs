@@ -1,0 +1,5426 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "YSUP-Link/REST to MES API",
+    "version": "1.0.0",
+    "description": "<h2 style=\"border-bottom: 1.5px solid #333\">MDOC-SOFT52079/G20250804133017</h2>\n<div style=\"border: solid 2px #FF0000; padding: 10px;\">\n本文書に含まれる技術内容は当社の秘密情報です。当社の許諾無く第三者への開示はできません。<br>\nThe Information contained in this message may be confidential and legally protected under applicable law.The message is intended solely for the addressee(s).If you are not the intended recipient, you are hereby notified that any use, forwarding, dissemination,or reproduction of this message is strictly prohibited and maybe unlawful.\n</div>\n\n<style>\n.blue {\n  color: blue;\n}\n</style>\n\n<h2 style=\"border-bottom: 1.5px solid #333\">Description</h2>\nThis specification document summarises the APIs that <b>YAMAHA ➡ MES</b>.<br>\nThe following APIs are supported.<br>\n\n| Event Name                         | Description                                                                    |\n|------------------------------------|--------------------------------------------------------------------------------|\n| MchStatusReport                    | Reportss machine status updates (e.g., INIT, RESET, STOP, RUN, etc.)           |\n| PCBEntryEvent <span class=\"blue\">*1</span>     | Verifies PCB production permission from MES, shows error if denied |\n| PcbExitEvent                       | Reports production history (mount log) of each PCB                             |\n| MaterialRequest <span class=\"blue\">*1</span>   | Verifies reel ID and requests usage permission and part info from MES, shows error if denied         |\n| CmpStatusReport                    | Reports current material usage information in real-time                        |\n| DetectedPartsKnotReport            | Reports reel-parts are switched (splicing detected)                            |\n| SetupRequest <span class=\"blue\">*1</span>      | Verifies operator setup for parts (e.g., trolley, magazine, feeder), shows error if denied |\n| SetupRemoved                       | Reports oprator un-setup for parts (e.g., trolley, magazine,feeder)            |\n| PgmSwitched                        | Reports the production program is switched                                     |\n| MaintenanceReport                  | Reports maintenance warnings or stop signals (e.g., feeder usage limits)       |\n| SensorPartsRemainCorrectionReport  | Reports reel quantity correction based on splicing sensor detection            |\n\n<span class=\"blue\">*1 require a response from MES.</span>\n\n<h2 style=\"border-bottom: 1.5px solid #333\">Note</h2>\n\nWhen sending request to REST-MES Server, please note the following points:\n- Ensure that your MES is registered in the RestComm Output Module before executing any API request.\n- Select the appropriate authentication type: either Basic or None, as required.\n- Include the client-name in the request header, matching the name of your Relay Instance registered in the RestComm Output Module.\n"
+  },
+  "servers": [
+    {
+      "url": "http://{ipAddress}:{serverPort}{serverBasePath}",
+      "description": "Customizable Server\nDefault → http://127.0.0.1:3001/\n",
+      "variables": {
+        "ipAddress": {
+          "default": "127.0.0.1",
+          "description": "The IP address of the REST-MES server (default: 127.0.0.1)"
+        },
+        "serverPort": {
+          "default": "3001",
+          "description": "The port on which the REST-MES server runs (default: 3001)"
+        },
+        "serverBasePath": {
+          "default": "/",
+          "description": "The base path for accessing the REST-MES API (default: /)"
+        }
+      }
+    }
+  ],
+  "security": [
+    {
+      "BasicAuth": []
+    },
+    {}
+  ],
+  "paths": {
+    "/": {
+      "post": {
+        "summary": "Process API request from RestComm to MES",
+        "tags": [
+          "RESTCOMM ROUTES"
+        ],
+        "description": "This route handles communication between RestComm and MES. It accepts a request body containing a specific `FuncName`, which determines the type of message being processed. Based on the function type, the corresponding logic is triggered and an appropriate response is returned.\n",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "client-name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Please Enter Relay Instance. Eg: Relay1"
+          }
+        ],
+        "requestBody": {
+          "description": "Data packet sent from RestComm Output Module to REST-MES",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "title": "Cmp Status Report",
+                    "$ref": "#/components/schemas/CmpStatusReport"
+                  },
+                  {
+                    "title": "Detected Parts Knot Report",
+                    "$ref": "#/components/schemas/DetectedPartsKnotReport"
+                  },
+                  {
+                    "title": "Maintenance Report from Mounter",
+                    "$ref": "#/components/schemas/MaintenanceReport-Mounter"
+                  },
+                  {
+                    "title": "Maintenance Report from SSTuneUpStation",
+                    "$ref": "#/components/schemas/MaintenanceReport-SSTuneUpStation"
+                  },
+                  {
+                    "title": "Material Request",
+                    "$ref": "#/components/schemas/MaterialRequest"
+                  },
+                  {
+                    "title": "Mch Status Change",
+                    "$ref": "#/components/schemas/MchStatusChange"
+                  },
+                  {
+                    "title": "Pcb Entry Event",
+                    "$ref": "#/components/schemas/PcbEntryEvent"
+                  },
+                  {
+                    "title": "Pgm Switched",
+                    "$ref": "#/components/schemas/PgmSwitched"
+                  },
+                  {
+                    "title": "Pgm Switched with Board data",
+                    "$ref": "#/components/schemas/PgmSwitched-With-BoardData"
+                  },
+                  {
+                    "title": "Setup Request",
+                    "$ref": "#/components/schemas/SetupRequest"
+                  },
+                  {
+                    "title": "Setup Removed",
+                    "$ref": "#/components/schemas/SetupRemoved"
+                  },
+                  {
+                    "title": "Sensor Parts Remain Correction",
+                    "$ref": "#/components/schemas/SensorPartsRemainCorrection"
+                  },
+                  {
+                    "title": "PCB Exit Event from Printer",
+                    "$ref": "#/components/schemas/PcbExitEvent-Printer"
+                  },
+                  {
+                    "title": "PCB Exit Event from Mounter using PCB_COMPLETED Report",
+                    "$ref": "#/components/schemas/PcbExitEvent-Mounter-PcbCompleted"
+                  },
+                  {
+                    "title": "PCB Exit Event from Mounter using TRACEABILITY Report",
+                    "$ref": "#/components/schemas/PcbExitEvent-Mounter-Traceability"
+                  },
+                  {
+                    "title": "PCB Exit Event from AOI/REPAIR_STATION",
+                    "$ref": "#/components/schemas/PcbExitEvent-Aoi-RepairStation"
+                  },
+                  {
+                    "title": "Display Message Result",
+                    "$ref": "#/components/schemas/DisplayMessageResult-Request"
+                  },
+                  {
+                    "title": "Machine Operation Command Result for CUR Command",
+                    "$ref": "#/components/schemas/MachineOperationCommandResult-CUR"
+                  },
+                  {
+                    "title": "Machine Operation Command Result for ORIGIN Command",
+                    "$ref": "#/components/schemas/MachineOperationCommandResult-ORIGIN"
+                  },
+                  {
+                    "title": "Machine Operation Command Result for RUN Command",
+                    "$ref": "#/components/schemas/MachineOperationCommandResult-RUN"
+                  },
+                  {
+                    "title": "Machine Operation Command Result for STOP Command",
+                    "$ref": "#/components/schemas/MachineOperationCommandResult-STOP"
+                  },
+                  {
+                    "title": "Machine Operation Command Result for RESET Command",
+                    "$ref": "#/components/schemas/MachineOperationCommandResult-RESET"
+                  },
+                  {
+                    "title": "Machine Operation Command Result for ERRCLEAR Command",
+                    "$ref": "#/components/schemas/MachineOperationCommandResult-ERRCLEAR"
+                  },
+                  {
+                    "title": "Machine Operation Command Result for SWI Command",
+                    "$ref": "#/components/schemas/MachineOperationCommandResult-SWI"
+                  },
+                  {
+                    "title": "Machine Operation Command Result for READEX Command",
+                    "$ref": "#/components/schemas/MachineOperationCommandResult-READEX"
+                  },
+                  {
+                    "title": "Machine Operation Command Result for WRITEEX Command",
+                    "$ref": "#/components/schemas/MachineOperationCommandResult-WRITEEX"
+                  },
+                  {
+                    "title": "Machine Operation Command Result for UPDATE_PARTS_REMAIN Command",
+                    "$ref": "#/components/schemas/MachineOperationCommandResult-UPDATE_PARTS_REMAIN"
+                  },
+                  {
+                    "title": "Machine Operation Command Result for REGISTER_PARTS Command",
+                    "$ref": "#/components/schemas/MachineOperationCommandResult-REGISTER_PARTS"
+                  },
+                  {
+                    "title": "Machine Operation Command Result for REMOTE_SCAN Command",
+                    "$ref": "#/components/schemas/MachineOperationCommandResult-REMOTE_SCAN"
+                  },
+                  {
+                    "title": "Machine Operation Command Result for LOCK_PANEL Command",
+                    "$ref": "#/components/schemas/MachineOperationCommandResult-LOCK_PANEL"
+                  },
+                  {
+                    "title": "Machine Operation Command Result for BLOCK_PARTS Command",
+                    "$ref": "#/components/schemas/MachineOperationCommandResult-BLOCK_PARTS"
+                  },
+                  {
+                    "title": "Machine Operation Command Result for UNBLOCK_PARTS Command",
+                    "$ref": "#/components/schemas/MachineOperationCommandResult-UNBLOCK_PARTS"
+                  },
+                  {
+                    "title": "Machine Operation Command Result for BLOCK_LOCATIONS Command",
+                    "$ref": "#/components/schemas/MachineOperationCommandResult-BLOCK_LOCATIONS"
+                  },
+                  {
+                    "title": "Machine Operation Command Result for UNBLOCK_LOCATIONS Command",
+                    "$ref": "#/components/schemas/MachineOperationCommandResult-UNBLOCK_LOCATIONS"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "FuncName"
+                }
+              },
+              "examples": {
+                "CMP_STATUS_REPORT_REQ": {
+                  "$ref": "#/components/examples/CmpStatusReport-Request"
+                },
+                "DETECTED_PARTS_KNOT_REPORT_REQ": {
+                  "$ref": "#/components/examples/DetectedPartsKnotReport-Request"
+                },
+                "MAINTENANCE_REPORT_REQ": {
+                  "$ref": "#/components/examples/MaintenanceReport-Mounter-Request"
+                },
+                "MAINTENANCE_REPORT_FOR_SSTUNEUPSTATION_REQ": {
+                  "$ref": "#/components/examples/MaintenanceReport-SSTuneUpStation-Request"
+                },
+                "MATERIAL_REQUEST_REQ": {
+                  "$ref": "#/components/examples/MaterialRequest-Request"
+                },
+                "MCH_STATUS_CHANGE_REQ": {
+                  "$ref": "#/components/examples/MchStatusChange-Request"
+                },
+                "PCB_ENTRY_EVENT_REQ": {
+                  "$ref": "#/components/examples/PcbEntryEvent-Request"
+                },
+                "PGM_SWITCHED_REQ": {
+                  "$ref": "#/components/examples/PgmSwitched-Request"
+                },
+                "PGM_SWITCHED_WITH_BOARD_DATA_REQ": {
+                  "$ref": "#/components/examples/PgmSwitched-With-BoardData-Request"
+                },
+                "SETUP_REQUEST_REQ": {
+                  "$ref": "#/components/examples/SetupRequest-Request"
+                },
+                "SETUP_REMOVED_REQ": {
+                  "$ref": "#/components/examples/SetupRemoved-Request"
+                },
+                "SENSOR_PARTS_REMAIN_CORRECTION_REQ": {
+                  "$ref": "#/components/examples/SensorPartsRemainCorrection-Request"
+                },
+                "PCB_EXIT_PRINTER_REQ": {
+                  "$ref": "#/components/examples/PcbExitEvent-Printer-Request"
+                },
+                "PCB_EXIT_MOUNTER_PCB_COMPLETED_REQ": {
+                  "$ref": "#/components/examples/PcbExitEvent-Mounter-PcbCompleted-Request"
+                },
+                "PCB_EXIT_MOUNTER_TRACEABILITY_REQ": {
+                  "$ref": "#/components/examples/PcbExitEvent-Mounter-Traceability-Request"
+                },
+                "PCB_EXIT_AOI_REPAIR_STATION_REQ": {
+                  "$ref": "#/components/examples/PcbExitEvent-Aoi-RepairStation-Request"
+                },
+                "DISPLAY_MESSAGE_RESULT_REQ": {
+                  "$ref": "#/components/examples/DisplayMessageResult-Request"
+                },
+                "MACHINE_OP_CUR_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommandResult-CUR-Request"
+                },
+                "MACHINE_OP_ORIGIN_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommandResult-ORIGIN-Request"
+                },
+                "MACHINE_OP_RUN_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommandResult-RUN-Request"
+                },
+                "MACHINE_OP_STOP_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommandResult-STOP-Request"
+                },
+                "MACHINE_OP_RESET_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommandResult-RESET-Request"
+                },
+                "MACHINE_OP_ERR_CLEAR_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommandResult-ERRCLEAR-Request"
+                },
+                "MACHINE_OP_SWI_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommandResult-SWI-Request"
+                },
+                "MACHINE_OP_READEX_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommandResult-READEX-Request"
+                },
+                "MACHINE_OP_WRITEEX_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommandResult-WRITEEX-Request"
+                },
+                "MACHINE_OP_UPDATE_PARTS_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommandResult-UPDATE_PARTS-Request"
+                },
+                "MACHINE_OP_REGISTER_PARTS_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommandResult-REGISTER_PARTS-Request"
+                },
+                "MACHINE_OP_REMOTE_SCAN_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommandResult-REMOTE_SCAN-Request"
+                },
+                "MACHINE_OP_LOCK_PANEL_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommandResult-LOCK_PANEL-Request"
+                },
+                "MACHINE_OP_BLOCK_PARTS_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommandResult-BLOCK_PARTS-Request"
+                },
+                "MACHINE_OP_UNBLOCK_PARTS_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommandResult-UNBLOCK_PARTS-Request"
+                },
+                "MACHINE_OP_BLOCK_LOCATIONS_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommandResult-BLOCK_LOCATIONS-Request"
+                },
+                "MACHINE_OP_UNBLOCK_LOCATIONS_REQ": {
+                  "$ref": "#/components/examples/MachineOperationCommandResult-UNBLOCK_LOCATIONS-Request"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Message received successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "title": "CmpStatusReport Response",
+                      "$ref": "#/components/schemas/CmpStatusReport-Response"
+                    },
+                    {
+                      "title": "DetectedPartsKnotReport Response",
+                      "$ref": "#/components/schemas/DetectedPartsKnotReport-Response"
+                    },
+                    {
+                      "title": "MaintenanceReport Response",
+                      "$ref": "#/components/schemas/MaintenanceReport-Response"
+                    },
+                    {
+                      "title": "MaterialRequest Response",
+                      "$ref": "#/components/schemas/MaterialRequest-Response"
+                    },
+                    {
+                      "title": "MchStatusChange Response",
+                      "$ref": "#/components/schemas/MchStatusChange-Response"
+                    },
+                    {
+                      "title": "PcbEntryEvent Response",
+                      "$ref": "#/components/schemas/PcbEntryEvent-Response"
+                    },
+                    {
+                      "title": "PcbExitEvent Response",
+                      "$ref": "#/components/schemas/PcbExitEvent-Response"
+                    },
+                    {
+                      "title": "PgmSwitched Response",
+                      "$ref": "#/components/schemas/PgmSwitched-Response"
+                    },
+                    {
+                      "title": "SetupRequest Response",
+                      "$ref": "#/components/schemas/SetupRequest-Response"
+                    },
+                    {
+                      "title": "SetupRemoved Response",
+                      "$ref": "#/components/schemas/SetupRemoved-Response"
+                    },
+                    {
+                      "title": "SensorPartsRemainCorrection Response",
+                      "$ref": "#/components/schemas/SensorPartsRemainCorrection-Response"
+                    },
+                    {
+                      "title": "DisplayMessageResult Response",
+                      "$ref": "#/components/schemas/DisplayMessageResult-Response"
+                    },
+                    {
+                      "title": "MachineOperationCommandResult Response",
+                      "$ref": "#/components/schemas/MachineOperationCommandResult-Response"
+                    }
+                  ],
+                  "discriminator": {
+                    "propertyName": "FuncName"
+                  }
+                },
+                "examples": {
+                  "CMP_STATUS_REPORT_RES": {
+                    "$ref": "#/components/examples/CmpStatusReport-Response"
+                  },
+                  "DETECTED_PARTS_KNOT_REPORT_RES": {
+                    "$ref": "#/components/examples/DetectedPartsKnotReport-Response"
+                  },
+                  "MAINTENANCE_REPORT_RES": {
+                    "$ref": "#/components/examples/MaintenanceReport-Response"
+                  },
+                  "MATERIAL_REQUEST_RES": {
+                    "$ref": "#/components/examples/MaterialRequest-Response"
+                  },
+                  "MCH_STATUS_CHANGE_RES": {
+                    "$ref": "#/components/examples/MchStatusChange-Response"
+                  },
+                  "PCB_ENTRY_EVENT_RES": {
+                    "$ref": "#/components/examples/PcbEntryEvent-Response"
+                  },
+                  "PCB_EXIT_EVENT_RES": {
+                    "$ref": "#/components/examples/PcbExitEvent-Response"
+                  },
+                  "PGM_SWITCHED_RES": {
+                    "$ref": "#/components/examples/PgmSwitched-Response"
+                  },
+                  "SETUP_REQUEST_RES": {
+                    "$ref": "#/components/examples/SetupRequest-Response"
+                  },
+                  "SETUP_REMOVED_RES": {
+                    "$ref": "#/components/examples/SetupRemoved-Response"
+                  },
+                  "SENSOR_PARTS_REMAIN_CORRECTION_RES": {
+                    "$ref": "#/components/examples/SensorPartsRemainCorrection-Response"
+                  },
+                  "DISPLAY_MESSAGE_RESULT_RES": {
+                    "$ref": "#/components/examples/DisplayMessageResult-Response"
+                  },
+                  "MACHINE_OP_CMD_RESULT_RES": {
+                    "$ref": "#/components/examples/MachineOperationCommandResult-Response"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "example": {
+                  "message": "Invalid request parameters"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error: Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "FuncName not available in Request Body"
+                    }
+                  }
+                },
+                "example": {
+                  "message": "FuncName not available in Request Body"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BasicAuth": {
+        "type": "http",
+        "scheme": "basic"
+      }
+    },
+    "schemas": {
+      "MachineInfo": {
+        "type": "object",
+        "required": [
+          "MchName",
+          "MchSerial",
+          "MchModel",
+          "LaneNo",
+          "LineName"
+        ],
+        "properties": {
+          "MchName": {
+            "type": "string",
+            "description": "Machine name which registered in the Yamaha system",
+            "example": "MOUNTER"
+          },
+          "MchSerial": {
+            "type": "string",
+            "description": "Serial number",
+            "example": "Y30001"
+          },
+          "MchModel": {
+            "type": "string",
+            "description": "Model name",
+            "example": "YSM20-SL-SS-LR"
+          },
+          "LaneNo": {
+            "type": "integer",
+            "description": "- 0 = All Lane\n- 1 = Lane1\n- 2 = Lane2\n- 3 = Lane3\n- 4 = Lane4\n",
+            "example": 0
+          },
+          "LineName": {
+            "type": "string",
+            "description": "Line name which registered in Yamaha System",
+            "example": "Line-1"
+          }
+        }
+      },
+      "CmpStatusReport": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "MchInfo",
+          "CmpStatus"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "CmpStatusReport",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20201229161211530",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "MchInfo": {
+            "$ref": "#/components/schemas/MachineInfo"
+          },
+          "CmpStatus": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "SetPos",
+                "Status",
+                "CartID",
+                "FdrID",
+                "FdrName",
+                "MgznID",
+                "ReelID",
+                "LotID",
+                "CmpName",
+                "CmpID",
+                "CmpCmnt",
+                "UsedLane",
+                "Qty",
+                "AvailTime",
+                "TimeLimit",
+                "Rank",
+                "Package",
+                "CmpNum",
+                "OriginalCmpNum",
+                "Pitch",
+                "Width",
+                "CellCountX",
+                "CellCountY",
+                "CartName"
+              ],
+              "properties": {
+                "SetPos": {
+                  "type": "integer",
+                  "example": 33,
+                  "description": "Set position"
+                },
+                "Status": {
+                  "type": "string",
+                  "example": "1",
+                  "description": "Status:\n- 0 = Free Parts \n- 1 = OK\n- 2 = Warning\n- 3 = Stop\n- 4 = Time Warning\n- 5 = Time Stop\n- 6 = Spliced/Preset Parts\n- 7 = No Parts Remain Manage\n"
+                },
+                "CartID": {
+                  "type": "string",
+                  "example": "CTZ3$32$2433262$12",
+                  "description": "Cart ID (empty string \"\" if  fixed bank) or ATS ID"
+                },
+                "FdrID": {
+                  "type": "string",
+                  "example": "ZSY-008-8037651C",
+                  "description": "Feeder ID (In case of Tray parts, palette ID is output)"
+                },
+                "FdrName": {
+                  "type": "string",
+                  "example": "8mmTape",
+                  "description": "Feeder Name"
+                },
+                "MgznID": {
+                  "type": "string",
+                  "example": "",
+                  "description": "Magazine ID(empty string \"\" if no tray parts)"
+                },
+                "ReelID": {
+                  "type": "string",
+                  "example": "442862",
+                  "description": "Reel ID or Tray ID"
+                },
+                "LotID": {
+                  "type": "string",
+                  "example": "5002225780",
+                  "description": "Lot ID of parts"
+                },
+                "CmpName": {
+                  "type": "string",
+                  "example": "5146CWTC21054",
+                  "description": "Part name"
+                },
+                "CmpID": {
+                  "type": "string",
+                  "example": "5146CWTC21054",
+                  "description": "Part ID"
+                },
+                "CmpCmnt": {
+                  "type": "string",
+                  "example": "",
+                  "description": "Part comment from program data or Yamaha DB"
+                },
+                "UsedLane": {
+                  "type": "string",
+                  "example": "1",
+                  "description": "Used lane by bit values:\n- 0 = Not Using\n- 1 = Lane 1\n- 10 = Lane 2 \n- 100 = Lane 3\n- 1000 = Lane 4\n- 1111 = All Lanes\n- 11 = Lane 1 & 2\n"
+                },
+                "Qty": {
+                  "type": "integer",
+                  "example": 495,
+                  "description": "Remaining component quantity of the reel ID"
+                },
+                "AvailTime": {
+                  "type": "string",
+                  "example": "",
+                  "description": "Available production time until parts run out"
+                },
+                "AvailCount": {
+                  "type": "string",
+                  "example": "99",
+                  "description": "Maximum number of boards producible until parts run out "
+                },
+                "TimeLimit": {
+                  "type": "string",
+                  "example": "19000101000000000",
+                  "description": "MSD remaining time (minutes). (it's blank if no MSD parts)"
+                },
+                "Rank": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "example": [
+                    "",
+                    "",
+                    "",
+                    "",
+                    ""
+                  ],
+                  "description": "LED rank information (Its' blank if no LEDparts)"
+                },
+                "Package": {
+                  "type": "integer",
+                  "example": 0,
+                  "description": "Parts supply form:\n- 0 = Tape feeder\n- 1 = Stick feeder\n- 2 = Bulk feeder\n- 3 = Tray feeder\n- 4 = Undefined feeding configuration\n"
+                },
+                "CmpNum": {
+                  "type": "integer",
+                  "example": 0,
+                  "description": "Part Number (User Number)"
+                },
+                "OriginalCmpNum": {
+                  "type": "integer",
+                  "example": 0,
+                  "description": "Original part number (user number)"
+                },
+                "Pitch": {
+                  "type": "string",
+                  "example": "",
+                  "description": "Feed pitch"
+                },
+                "Width": {
+                  "type": "number",
+                  "example": 0,
+                  "description": "Tape width"
+                },
+                "CellCountX": {
+                  "type": "integer",
+                  "example": 0,
+                  "description": "Number of tray parts X"
+                },
+                "CellCountY": {
+                  "type": "integer",
+                  "example": 0,
+                  "description": "Number of tray parts Y"
+                },
+                "CartName": {
+                  "type": "string",
+                  "example": "",
+                  "description": "Cart number"
+                }
+              }
+            }
+          }
+        }
+      },
+      "DetectedPartsKnotReport": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "MchInfo",
+          "SplicingStatus"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "DetectedPartsKnotReport",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250610104717658",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "MchInfo": {
+            "$ref": "#/components/schemas/MachineInfo"
+          },
+          "SplicingStatus": {
+            "type": "object",
+            "required": [
+              "SetPos",
+              "OldReelID",
+              "NewReelID"
+            ],
+            "properties": {
+              "SetPos": {
+                "type": "integer",
+                "example": 0,
+                "description": "Set position"
+              },
+              "OldReelID": {
+                "type": "string",
+                "example": "",
+                "description": "Previous reel ID before splicing"
+              },
+              "NewReelID": {
+                "type": "string",
+                "example": "",
+                "description": "Next reel ID after splicing"
+              }
+            }
+          }
+        }
+      },
+      "MaintenanceReport-Mounter": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "MchInfo",
+          "MaintenanceInfos"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MaintenanceReport",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250610153315493",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "MchInfo": {
+            "$ref": "#/components/schemas/MachineInfo"
+          },
+          "MaintenanceInfos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "Type",
+                "FeederInfos"
+              ],
+              "properties": {
+                "Type": {
+                  "type": "integer",
+                  "example": 0,
+                  "description": "Set as 0 for Mounter Machine"
+                },
+                "FeederInfos": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "ErrorType",
+                      "SetNum",
+                      "UniqueID",
+                      "ErrorKind",
+                      "ErrorTiming",
+                      "FeederDriveCount",
+                      "FedderMacsCorrectX",
+                      "FeederMacsCorrectY",
+                      "PickUpErrorRate",
+                      "ALFTapeGuideDriveCount",
+                      "MaintenanceSettings"
+                    ],
+                    "properties": {
+                      "ErrorType": {
+                        "type": "integer",
+                        "example": 1,
+                        "description": "ErrorType: 1 = Alarm, 2 = Stop"
+                      },
+                      "SetNum": {
+                        "type": "integer",
+                        "example": 1,
+                        "description": "Feeder Set Number"
+                      },
+                      "UniqueID": {
+                        "type": "string",
+                        "example": "ZSY-008-000001",
+                        "description": "Feeder ID"
+                      },
+                      "ErrorKind": {
+                        "type": "integer",
+                        "example": 0,
+                        "description": "Error kind:\n- 0 = FeederDriveCount\n- 1 = FeederMacsCorrect\n- 2 = PickUpErrorRate\n- 3 = ALFTapeGuideDriveCount\n"
+                      },
+                      "ErrorTiming": {
+                        "type": "integer",
+                        "example": 0,
+                        "description": "Error timing:\n- 0 = Power ON\n- 1 = Feeder ON/OFF\n- 2 = Feeder count over\n- 3 = Board change\n- 4 = Reset\n- 5 = Power OFF\n- 6 = Time setting\n"
+                      },
+                      "FeederDriveCount": {
+                        "type": "integer",
+                        "example": 123456,
+                        "description": "Feeder Drive count"
+                      },
+                      "FedderMacsCorrectX": {
+                        "type": "number",
+                        "example": null,
+                        "description": "Feeder MACS correction X value"
+                      },
+                      "FeederMacsCorrectY": {
+                        "type": "number",
+                        "example": null,
+                        "description": "Feeder MACS correction Y value"
+                      },
+                      "PickUpErrorRate": {
+                        "type": "number",
+                        "example": null,
+                        "description": "Pickup Error Rate"
+                      },
+                      "ALFTapeGuideDriveCount": {
+                        "type": "integer",
+                        "example": null,
+                        "description": "ALF tape guide drive count"
+                      },
+                      "MaintenanceSettings": {
+                        "type": "object",
+                        "required": [
+                          "FeederDriveCount",
+                          "FeederMacsCorrectX",
+                          "FeederMacsCorrectY",
+                          "PickUpErrorRate",
+                          "ALFTapeGuideDriveCount",
+                          "PickUpSamples"
+                        ],
+                        "properties": {
+                          "FeederDriveCount": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer"
+                            },
+                            "example": [
+                              5000000,
+                              7000000
+                            ],
+                            "description": "[Alarm Count, Stop Count]"
+                          },
+                          "FeederMacsCorrectX": {
+                            "type": "array",
+                            "items": {
+                              "type": "number"
+                            },
+                            "example": [
+                              0.2,
+                              0
+                            ],
+                            "description": "[Alarm Amount, Stop Amount]"
+                          },
+                          "FeederMacsCorrectY": {
+                            "type": "array",
+                            "items": {
+                              "type": "number"
+                            },
+                            "example": [
+                              0.2,
+                              0
+                            ],
+                            "description": "[Alarm Amount, Stop Amount]"
+                          },
+                          "PickUpErrorRate": {
+                            "type": "array",
+                            "items": {
+                              "type": "number"
+                            },
+                            "example": [
+                              1,
+                              0
+                            ],
+                            "description": "[Alarm Amount, Stop Amount]"
+                          },
+                          "ALFTapeGuideDriveCount": {
+                            "type": "array",
+                            "items": {
+                              "type": "integer"
+                            },
+                            "example": [
+                              5000000,
+                              7000000
+                            ],
+                            "description": "[Alarm Amount, Stop Amount]"
+                          },
+                          "PickUpSamples": {
+                            "type": "integer",
+                            "example": 100,
+                            "description": "Minimum sample count for calculating PickUpErrorRate"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "MaintenanceReport-SSTuneUpStation": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "MchInfo",
+          "MaintenanceInfos"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MaintenanceReport",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250618161052967",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "MchInfo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MachineInfo"
+              },
+              {
+                "properties": {
+                  "MchName": {
+                    "example": "SS Tune-up Station"
+                  },
+                  "MchModel": {
+                    "example": "SS Tune-up Station"
+                  },
+                  "LaneNo": {
+                    "example": 0,
+                    "description": "Always set as zero for SS Tune-up Station"
+                  },
+                  "LineName": {
+                    "example": "",
+                    "description": "Always set as empty string for SS Tune-up Station"
+                  }
+                }
+              }
+            ]
+          },
+          "MaintenanceInfos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "Type",
+                "SSTuneUpStationHistory"
+              ],
+              "properties": {
+                "Type": {
+                  "type": "integer",
+                  "example": 1,
+                  "description": "Set as 1 for SS Tune-up Station Machine"
+                },
+                "SSTuneUpStationHistory": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "FeederID",
+                      "Manufactured",
+                      "MeasuredDate",
+                      "IsAdjust",
+                      "DrvCount",
+                      "BadX",
+                      "AveX",
+                      "RangeX",
+                      "ThreeSigmaX",
+                      "CpkX",
+                      "BadY",
+                      "AveY",
+                      "RangeY",
+                      "ThreeSigmaY",
+                      "CpkY"
+                    ],
+                    "properties": {
+                      "FeederID": {
+                        "type": "string",
+                        "example": "ZSY-008-8037651C",
+                        "description": "Feeder individual ID"
+                      },
+                      "Manufactured": {
+                        "type": "string",
+                        "example": "2022-11-22",
+                        "description": "Manufacturing date of feeder"
+                      },
+                      "MeasuredDate": {
+                        "type": "string",
+                        "example": "2023-09-26",
+                        "description": "Date when measurement in SS Tune-up Station is performed"
+                      },
+                      "IsAdjust": {
+                        "type": "string",
+                        "example": "-1",
+                        "description": "Displays if correction was performed with the pickup position measurement result"
+                      },
+                      "DrvCount": {
+                        "type": "string",
+                        "example": "24",
+                        "description": "Number of sprocket operations"
+                      },
+                      "BadX": {
+                        "type": "string",
+                        "example": "0",
+                        "description": "Worst value of measurement result in X direction"
+                      },
+                      "AveX": {
+                        "type": "string",
+                        "example": "0",
+                        "description": "Average value of measurement result in X direction"
+                      },
+                      "RangeX": {
+                        "type": "string",
+                        "example": "0",
+                        "description": "Difference between maximum value and minimum value of measurement result in X direction"
+                      },
+                      "ThreeSigmaX": {
+                        "type": "string",
+                        "example": "0",
+                        "description": "3 sigma of feed accuracy in X direction"
+                      },
+                      "CpkX": {
+                        "type": "string",
+                        "example": "0",
+                        "description": "Feed accuracy in X direction as a Cpk value"
+                      },
+                      "BadY": {
+                        "type": "string",
+                        "example": "0",
+                        "description": "Worst value of measurement result in Y direction"
+                      },
+                      "AveY": {
+                        "type": "string",
+                        "example": "0",
+                        "description": "Average value of measurement result in Y direction"
+                      },
+                      "RangeY": {
+                        "type": "string",
+                        "example": "0",
+                        "description": "Difference between maximum value and minimum value of measurement result in Y direction"
+                      },
+                      "ThreeSigmaY": {
+                        "type": "string",
+                        "example": "0",
+                        "description": "3 sigma of feed accuracy in Y direction"
+                      },
+                      "CpkY": {
+                        "type": "string",
+                        "example": "0",
+                        "description": "Feed accuracy in Y direction as a Cpk value"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "MaterialRequest": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "MchInfo",
+          "Component"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MaterialRequest",
+            "description": "Function name of JSON: MaterialRequest"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250610150019708",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "MchInfo": {
+            "$ref": "#/components/schemas/MachineInfo"
+          },
+          "Component": {
+            "type": "object",
+            "required": [
+              "ReelID",
+              "OrderID",
+              "Assy",
+              "LotID",
+              "SurfaceInfo",
+              "BoardName"
+            ],
+            "properties": {
+              "ReelID": {
+                "type": "string",
+                "example": "1234",
+                "description": "Scanned reel ID"
+              },
+              "OrderID": {
+                "type": "string",
+                "example": "0",
+                "description": "Track ID in the Yamaha system"
+              },
+              "Assy": {
+                "type": "string",
+                "example": "",
+                "description": "Assembly"
+              },
+              "LotID": {
+                "type": "string",
+                "example": "",
+                "description": "Production lot"
+              },
+              "SurfaceInfo": {
+                "type": "string",
+                "example": "",
+                "description": "Surface information"
+              },
+              "BoardName": {
+                "type": "string",
+                "example": "",
+                "description": "Board name"
+              }
+            }
+          }
+        }
+      },
+      "MchStatusChange": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "MchInfo",
+          "MchStatus"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MchStatusChange",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250618155651668",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "MchInfo": {
+            "$ref": "#/components/schemas/MachineInfo"
+          },
+          "MchStatus": {
+            "type": "object",
+            "required": [
+              "Old",
+              "New",
+              "Additional"
+            ],
+            "properties": {
+              "Old": {
+                "type": "integer",
+                "example": 1,
+                "description": "Old Machine Status:\n- 0 = Offline\n- 1 = Init\n- 2 = Reset\n- 3 = Stop\n- 4 = Run\n- 5 = Production Start\n- 6 = Production Completed\n- 7 = Error\n- 8 = Power On    \n"
+              },
+              "New": {
+                "type": "integer",
+                "example": 0,
+                "description": "New Machine Status: \n- 0 = Offline\n- 1 = Init\n- 2 = Reset\n- 3 = Stop\n- 4 = Run\n- 5 = Production Start\n- 6 = Production Completed\n- 7 = Error\n- 8 = Power On\n"
+              },
+              "Additional": {
+                "type": "string",
+                "example": "ERR123",
+                "description": "Error number output when status becomes error"
+              }
+            }
+          }
+        }
+      },
+      "PcbEntryEvent": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "MchInfo",
+          "PcbInfo"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "PcbEntryEvent",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250610130839394",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "MchInfo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MachineInfo"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "LaneNo": {
+                    "type": "integer",
+                    "example": 0,
+                    "description": "Target lane number\n- 0 = All Lane\n- 1 = Lane1\n- 2 = Lane2\n- 3 = Lane3\n- 4 = Lane4\n"
+                  }
+                }
+              }
+            ]
+          },
+          "PcbInfo": {
+            "type": "object",
+            "required": [
+              "PcbID",
+              "PgmName"
+            ],
+            "properties": {
+              "PcbID": {
+                "type": "string",
+                "example": "1234",
+                "description": "PCB ID"
+              },
+              "PgmName": {
+                "type": "string",
+                "example": "",
+                "description": "Program name"
+              }
+            }
+          }
+        }
+      },
+      "PgmSwitched": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "MchInfo",
+          "PgmInfo"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "PgmSwitched",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250618180512053",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "MchInfo": {
+            "$ref": "#/components/schemas/MachineInfo"
+          },
+          "PgmInfo": {
+            "type": "object",
+            "required": [
+              "PgmName",
+              "NumberOfLane",
+              "LanePgmInfo"
+            ],
+            "properties": {
+              "PgmName": {
+                "type": "string",
+                "example": "ProgramSample1",
+                "description": "Main program name after switching"
+              },
+              "NumberOfLane": {
+                "type": "integer",
+                "example": 1,
+                "description": "Number of lanes affected by program switching"
+              },
+              "LanePgmInfo": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "Lane",
+                    "PgmName"
+                  ],
+                  "properties": {
+                    "Lane": {
+                      "type": "integer",
+                      "example": 1,
+                      "description": "Lane number"
+                    },
+                    "PgmName": {
+                      "type": "string",
+                      "example": "ProgramSample1",
+                      "description": "Program name for this lane"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "PgmSwitched-With-BoardData": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "MchInfo",
+          "PgmInfo"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "PgmSwitched",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20200225174901000",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "MchInfo": {
+            "$ref": "#/components/schemas/MachineInfo"
+          },
+          "PgmInfo": {
+            "type": "object",
+            "required": [
+              "PgmName",
+              "NumberOfLane",
+              "LanePgmInfo"
+            ],
+            "properties": {
+              "PgmName": {
+                "type": "string",
+                "example": "ProgramSample1",
+                "description": "Main program name after switching\""
+              },
+              "NumberOfLane": {
+                "type": "integer",
+                "example": 2,
+                "description": "Number of lanes affected by program switching"
+              },
+              "LanePgmInfo": {
+                "type": "array",
+                "description": "",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "Lane",
+                    "PgmName",
+                    "PgmData",
+                    "Result",
+                    "ResultMessage"
+                  ],
+                  "properties": {
+                    "Lane": {
+                      "type": "integer",
+                      "example": 1,
+                      "description": "Lane Number"
+                    },
+                    "PgmName": {
+                      "type": "string",
+                      "example": "ProgramSample1",
+                      "description": "Program name for this lane"
+                    },
+                    "PgmData": {
+                      "type": "string",
+                      "example": "020013009b0101000004000000000000000000000000000000000000000",
+                      "description": "Program data for this lane in buffer format"
+                    },
+                    "Result": {
+                      "type": "integer",
+                      "example": 1,
+                      "description": "Result Code of Command Reception: 1 = Success, 2 = Failure"
+                    },
+                    "ResultMessage": {
+                      "type": "string",
+                      "example": "1: OK",
+                      "description": "Result code message"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "CarrierInfo": {
+        "type": "object",
+        "required": [
+          "Name",
+          "SetNo",
+          "Type",
+          "UniqueID",
+          "CmpInfos"
+        ],
+        "properties": {
+          "Name": {
+            "type": "string",
+            "example": "8mmTape",
+            "description": "Name of the carrier"
+          },
+          "SetNo": {
+            "type": "integer",
+            "example": 1,
+            "description": "Set number"
+          },
+          "Type": {
+            "type": "integer",
+            "example": 0,
+            "description": "Type of carrier"
+          },
+          "UniqueID": {
+            "type": "string",
+            "example": "ZSY-008-000001",
+            "description": "Unique ID of the carrier"
+          },
+          "CmpInfos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "CmpID",
+                "Qty",
+                "UniqueID"
+              ],
+              "properties": {
+                "CmpID": {
+                  "type": "string",
+                  "example": "PARTS001",
+                  "description": "Part ID"
+                },
+                "Qty": {
+                  "type": "integer",
+                  "example": 5000,
+                  "description": "Quantity of parts in the carrier"
+                },
+                "UniqueID": {
+                  "type": "string",
+                  "example": "123456002",
+                  "description": "Unique ID of the part in the carrier"
+                }
+              }
+            }
+          },
+          "MountInfos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "BlockNo",
+                "SilkInfos"
+              ],
+              "properties": {
+                "BlockNo": {
+                  "type": "integer",
+                  "example": 0,
+                  "description": "Block number for the mount information"
+                },
+                "SilkInfos": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "MountNo",
+                      "Silk"
+                    ],
+                    "properties": {
+                      "MountNo": {
+                        "type": "integer",
+                        "example": 1,
+                        "description": "Mount number for the silk information"
+                      },
+                      "Silk": {
+                        "type": "string",
+                        "example": "Pattern1",
+                        "description": "Silk"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "SetupRequest": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "MchInfo",
+          "SetInfos"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "SetupRequest",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250407131800251",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "MchInfo": {
+            "$ref": "#/components/schemas/MachineInfo"
+          },
+          "SetInfos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "CarrierInfos",
+                "LocationID",
+                "Operation"
+              ],
+              "properties": {
+                "Operation": {
+                  "type": "integer",
+                  "example": 1,
+                  "description": "User operation:\n- 1 = Cart Setup\n- 3 = Magazine Setup\n- 5 = Feeder Setup\n- 7 = Parts Setup\n- 9 = Splicing_Joined\n- 41 = Program_Switch\n"
+                },
+                "LocationID": {
+                  "type": "string",
+                  "example": "CTS$24$001$12",
+                  "description": "Serial numer of Feeder Cart or Auto Tray Changer"
+                },
+                "CarrierInfos": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CarrierInfo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "SetupRemoved": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "MchInfo",
+          "SetInfos"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "SetupRemoved",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250610153110560",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "MchInfo": {
+            "$ref": "#/components/schemas/MachineInfo"
+          },
+          "SetInfos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "Operation",
+                "LocationID",
+                "CarrierInfos"
+              ],
+              "properties": {
+                "Operation": {
+                  "type": "integer",
+                  "example": 2,
+                  "description": "User operation:\n- 2 = Cart Remove\n- 4 = Magazine Remove\n- 6 = Feeder Remove\n- 8 = Parts Remove\n- 10 = Splicing_Splited\n"
+                },
+                "LocationID": {
+                  "type": "string",
+                  "example": "CTZ1$32$653941$12",
+                  "description": "Serial number of Feeder Cart or Auto Tray Changer"
+                },
+                "CarrierInfos": {
+                  "type": "array",
+                  "description": "Carrier-level removal information",
+                  "items": {
+                    "$ref": "#/components/schemas/CarrierInfo"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "SensorPartsRemainCorrection": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "MchInfo",
+          "SensorPartsRemainCorrection"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "SensorPartsRemainCorrection",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250610155439612",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "MchInfo": {
+            "$ref": "#/components/schemas/MachineInfo"
+          },
+          "SensorPartsRemainCorrection": {
+            "type": "object",
+            "description": "Correction data for remaining parts (Sensor-based)",
+            "required": [
+              "CmpID",
+              "UniqueID",
+              "SetNum",
+              "FeederID",
+              "CorrectionNum",
+              "AfterCorrectionNum"
+            ],
+            "properties": {
+              "CmpID": {
+                "type": "string",
+                "example": "PARTSID001",
+                "description": "Part ID"
+              },
+              "UniqueID": {
+                "type": "string",
+                "example": "REEL001",
+                "description": "Reel ID"
+              },
+              "SetNum": {
+                "type": "integer",
+                "example": 31,
+                "description": "Set position"
+              },
+              "FeederID": {
+                "type": "string",
+                "example": "ZSY-008-000001",
+                "description": "Feeder ID"
+              },
+              "CorrectionNum": {
+                "type": "integer",
+                "example": -50,
+                "description": "Corrected remaining number of reel"
+              },
+              "AfterCorrectionNum": {
+                "type": "integer",
+                "example": 30,
+                "description": "Remaining number of reel after correction"
+              }
+            }
+          }
+        }
+      },
+      "PcbExitEvent-Printer": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "MchInfo",
+          "TraceDate",
+          "PcbInfo",
+          "MchPrdInfo"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "PcbExitEvent",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250404143546315",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "MchInfo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MachineInfo"
+              },
+              {
+                "properties": {
+                  "MchName": {
+                    "example": "PRINTER"
+                  },
+                  "MchModel": {
+                    "example": "YSP20-SL-SS-LR"
+                  }
+                }
+              }
+            ]
+          },
+          "PcbInfo": {
+            "type": "object",
+            "required": [
+              "PcbID",
+              "PgmName",
+              "LaneNo",
+              "MountComplete"
+            ],
+            "properties": {
+              "PcbID": {
+                "type": "string",
+                "example": "1003402337",
+                "description": "PCB ID"
+              },
+              "PgmName": {
+                "type": "string",
+                "example": "Infineon_PG-DFN-8-1",
+                "description": "Program name"
+              },
+              "PrdLot": {
+                "type": "string",
+                "example": "",
+                "description": "Production lot number"
+              },
+              "PrdModel": {
+                "type": "string",
+                "example": "",
+                "description": "Board Assembly number"
+              },
+              "PcbSide": {
+                "type": "string",
+                "example": "",
+                "description": "Board Surface information"
+              },
+              "FrontOpeID": {
+                "type": "string",
+                "example": "",
+                "description": "Operator ID (Front side)"
+              },
+              "RearOpeID": {
+                "type": "string",
+                "example": "",
+                "description": "Operator ID (Rear side)"
+              },
+              "LaneNo": {
+                "type": "integer",
+                "example": 1,
+                "description": "Lane number"
+              },
+              "MountComplete": {
+                "type": "integer",
+                "example": 1,
+                "description": "MountComplete: 0 = There are still machines to operate. 1 = Production of the last machine has finished."
+              }
+            }
+          },
+          "MchPrdInfo": {
+            "type": "object",
+            "required": [
+              "SqgDirection",
+              "SqgSpeed",
+              "SqgPress",
+              "SqgPressMax",
+              "SqgPressMin",
+              "AirconTempErr",
+              "F.MaskOffsetX",
+              "F.MaskOffsetY",
+              "F.MaskOffsetZ",
+              "F.MaskOffsetR",
+              "B.MaskOffsetX",
+              "B.MaskOffsetY",
+              "B.MaskOffsetZ",
+              "B.MaskOffsetR",
+              "RollingWidth",
+              "PrintCT",
+              "TransferCT"
+            ],
+            "properties": {
+              "SqgDirection": {
+                "type": "string",
+                "example": "RF",
+                "description": "Squeegee direction (FR, RF, FF, RR)"
+              },
+              "SqgSpeed": {
+                "type": "number",
+                "example": 50.1,
+                "description": "Squeegee speed"
+              },
+              "SqgPress": {
+                "type": "number",
+                "example": 50.2,
+                "description": "Target squeegee pressure (N) (set value)"
+              },
+              "SqgPressMax": {
+                "type": "number",
+                "example": 51.413,
+                "description": "Maximum squeegee pressure (actual measured value)"
+              },
+              "SqgPressMin": {
+                "type": "number",
+                "example": 49.497,
+                "description": "Minimum squeegee pressure (actual measured value)"
+              },
+              "AirconTempErr": {
+                "type": "integer",
+                "example": 0,
+                "description": "Air conditioner temperature status: 0 = OK, 1 = NG (it's '1' if air conditioner is not used)"
+              },
+              "F.MaskOffsetX": {
+                "type": "number",
+                "example": -0.073,
+                "description": "Mask offset X (Print start position is front)"
+              },
+              "F.MaskOffsetY": {
+                "type": "number",
+                "example": 0.103,
+                "description": "Mask offset Y (Print start position is front)"
+              },
+              "F.MaskOffsetZ": {
+                "type": "number",
+                "example": 0,
+                "description": "Mask offset Z (Print start position is front)"
+              },
+              "F.MaskOffsetR": {
+                "type": "number",
+                "example": 0.008,
+                "description": "Mask offset R (Print start position is front)"
+              },
+              "B.MaskOffsetX": {
+                "type": "number",
+                "example": -0.073,
+                "description": "Mask offset X (Print start position is back)"
+              },
+              "B.MaskOffsetY": {
+                "type": "number",
+                "example": 0.103,
+                "description": "Mask offset Y (Print start position is back)"
+              },
+              "B.MaskOffsetZ": {
+                "type": "number",
+                "example": 0,
+                "description": "Mask offset Z (Print start position is back)"
+              },
+              "B.MaskOffsetR": {
+                "type": "number",
+                "example": 0.008,
+                "description": "Mask offset R (Print start position is back)"
+              },
+              "RollingWidth": {
+                "type": "number",
+                "example": 10.118,
+                "description": "Solder width"
+              },
+              "PrintCT": {
+                "type": "number",
+                "example": 8.2234,
+                "description": "Print cycle time"
+              },
+              "TransferCT": {
+                "type": "number",
+                "example": 6.121345,
+                "description": "Transfer cycle time"
+              },
+              "MaskID": {
+                "type": "string",
+                "example": "Z8B00188122",
+                "description": "Mask ID"
+              },
+              "MaskSerial": {
+                "type": "string",
+                "example": "000057635",
+                "description": "Mask serial"
+              },
+              "SolderID": {
+                "type": "string",
+                "example": "7025520-Z07-EN",
+                "description": "Solder ID"
+              },
+              "SolderSerial": {
+                "type": "string",
+                "example": "Y49684",
+                "description": "Solder serial"
+              },
+              "SqgID": {
+                "type": "string",
+                "example": "",
+                "description": "Squeegee ID"
+              },
+              "SqgSerial": {
+                "type": "string",
+                "example": "",
+                "description": "Squeegee serial"
+              },
+              "UserDef": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "example": [],
+                "description": "User defined ID"
+              }
+            }
+          }
+        }
+      },
+      "PcbExitEvent-Mounter-PcbCompleted": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "MchInfo",
+          "TraceDate",
+          "PcbInfo",
+          "MchPrdInfo"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "PcbExitEvent",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20240917093101000",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "MchInfo": {
+            "$ref": "#/components/schemas/MachineInfo"
+          },
+          "PcbInfo": {
+            "type": "object",
+            "required": [
+              "PcbID",
+              "PgmName",
+              "PrdLot",
+              "PrdModel",
+              "PcbSide",
+              "FrontOpeID",
+              "RearOpeID",
+              "LaneNo",
+              "MountComplete"
+            ],
+            "properties": {
+              "PcbID": {
+                "type": "string",
+                "example": "B30046701017367114329",
+                "description": "PCB ID"
+              },
+              "PgmName": {
+                "type": "string",
+                "example": "PEPPER_MICRO_467_QCA",
+                "description": "Program name"
+              },
+              "PrdLot": {
+                "type": "string",
+                "example": "173671",
+                "description": "Lot number of Production"
+              },
+              "PrdModel": {
+                "type": "string",
+                "example": "3.30999E+14",
+                "description": "Assembly number"
+              },
+              "PcbSide": {
+                "type": "string",
+                "example": "",
+                "description": "Board Surface information"
+              },
+              "FrontOpeID": {
+                "type": "string",
+                "example": "TSV:r.schmidt",
+                "description": "Operator ID who is handling at Front on Machine"
+              },
+              "RearOpeID": {
+                "type": "string",
+                "example": "",
+                "description": "Operator ID who is handling at Rear on Machine"
+              },
+              "LaneNo": {
+                "type": "integer",
+                "example": 1,
+                "description": "Lane number"
+              },
+              "MountComplete": {
+                "type": "integer",
+                "enum": [
+                  0,
+                  1
+                ],
+                "description": "MountComplete: 0 = There are still machines to operate. 1 = Production of the last machine has finished."
+              }
+            }
+          },
+          "MchPrdInfo": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "BlkNo",
+                "BlkID",
+                "MntDetail"
+              ],
+              "properties": {
+                "BlkNo": {
+                  "type": "integer",
+                  "example": 42,
+                  "description": "Block number"
+                },
+                "BlkID": {
+                  "type": "string",
+                  "example": "",
+                  "description": "Block ID"
+                },
+                "MntDetail": {
+                  "type": "array",
+                  "description": "Mount result information for each parts (Array type)",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "NotMnt",
+                      "MntNo",
+                      "RefName",
+                      "CmpNo",
+                      "MntTbl",
+                      "HeadNo",
+                      "CmpName",
+                      "CmpCmnt",
+                      "FdrTyp",
+                      "SetNo",
+                      "CmpID",
+                      "LotID",
+                      "ReelID",
+                      "FdrID",
+                      "MountSpeed",
+                      "MountSpeed2",
+                      "MountForce",
+                      "MountTimer",
+                      "PartsRecX",
+                      "PartsRecY",
+                      "PartsRecR",
+                      "NozzleType",
+                      "PickVacuumValue",
+                      "PreMountVacuumValue",
+                      "MountHeight",
+                      "CoplaSetValue",
+                      "CoplaRecValue",
+                      "MountDateTime",
+                      "TrayCompXPos",
+                      "TrayCompYPos",
+                      "Bincode",
+                      "MntStage"
+                    ],
+                    "properties": {
+                      "NotMnt": {
+                        "type": "integer",
+                        "example": 1,
+                        "enum": [
+                          0,
+                          1
+                        ],
+                        "description": "Mount Completion: 0 = Success, 1 = Failure"
+                      },
+                      "MntNo": {
+                        "example": 897,
+                        "type": "integer",
+                        "description": "Mount number"
+                      },
+                      "RefName": {
+                        "type": "string",
+                        "example": "C27",
+                        "description": "Mount position name"
+                      },
+                      "CmpNo": {
+                        "type": "integer",
+                        "example": 11,
+                        "description": "Part number"
+                      },
+                      "MntTbl": {
+                        "type": "string",
+                        "example": "Tisch B",
+                        "description": "Table number"
+                      },
+                      "HeadNo": {
+                        "type": "integer",
+                        "example": 10,
+                        "description": "Head number"
+                      },
+                      "CmpName": {
+                        "type": "string",
+                        "example": "3.01006E+11",
+                        "description": "Part name"
+                      },
+                      "CmpCmnt": {
+                        "type": "string",
+                        "example": "Chipkond._X7R_100nF",
+                        "description": "Part comment"
+                      },
+                      "FdrTyp": {
+                        "type": "string",
+                        "example": "8mm1005-Chip",
+                        "description": "Feeder type"
+                      },
+                      "SetNo": {
+                        "type": "integer",
+                        "example": 120,
+                        "description": "Set number"
+                      },
+                      "CmpID": {
+                        "type": "string",
+                        "example": "3.01006E+11",
+                        "description": "Component ID"
+                      },
+                      "LotID": {
+                        "type": "string",
+                        "example": "",
+                        "description": "Lot ID"
+                      },
+                      "ReelID": {
+                        "type": "string",
+                        "example": "1.30434E+19",
+                        "description": "Reel ID"
+                      },
+                      "FdrID": {
+                        "type": "string",
+                        "example": "ZSY-008-0013108A",
+                        "description": "Feeder ID"
+                      },
+                      "MountSpeed": {
+                        "type": "integer",
+                        "example": 100,
+                        "description": "Mounting speed"
+                      },
+                      "MountSpeed2": {
+                        "type": "integer",
+                        "example": 0,
+                        "description": "Second stage speed"
+                      },
+                      "MountForce": {
+                        "type": "number",
+                        "example": 6.1,
+                        "description": "Mounting force"
+                      },
+                      "MountTimer": {
+                        "type": "number",
+                        "example": 0,
+                        "description": "Mounting timer"
+                      },
+                      "PartsRecX": {
+                        "type": "number",
+                        "example": 0,
+                        "description": "Correction value X"
+                      },
+                      "PartsRecY": {
+                        "type": "number",
+                        "example": 0,
+                        "description": "Correction value Y"
+                      },
+                      "PartsRecR": {
+                        "type": "number",
+                        "example": 0,
+                        "description": "Correction value R"
+                      },
+                      "NozzleType": {
+                        "type": "string",
+                        "example": "TYP-301",
+                        "description": "Nozzle type"
+                      },
+                      "PickVacuumValue": {
+                        "type": "integer",
+                        "example": 164,
+                        "description": "Suction vacuum pressure (actual measured value)"
+                      },
+                      "PreMountVacuumValue": {
+                        "type": "integer",
+                        "example": 167,
+                        "description": "Vacuum pressure before mounting (actual measured value)"
+                      },
+                      "MountHeight": {
+                        "type": "number",
+                        "example": 0.2,
+                        "description": "Mounting height"
+                      },
+                      "CoplaSetValue": {
+                        "type": "integer",
+                        "example": 190,
+                        "description": "3D coplanarity tolerance (um) set for the component used"
+                      },
+                      "CoplaRecValue": {
+                        "type": "integer",
+                        "example": 101,
+                        "description": "Maximum-minimum lead lift difference (actual measured value)"
+                      },
+                      "MountDateTime": {
+                        "type": "string",
+                        "example": "19000101000000000",
+                        "description": "Mount Date Time"
+                      },
+                      "TrayCompXPos": {
+                        "type": "integer",
+                        "example": 0,
+                        "description": "X position for Tray"
+                      },
+                      "TrayCompYPos": {
+                        "type": "integer",
+                        "example": 0,
+                        "description": "Y position for Tray"
+                      },
+                      "Bincode": {
+                        "type": "string",
+                        "example": "",
+                        "description": "Bin code"
+                      },
+                      "MntStage": {
+                        "type": "integer",
+                        "example": 1,
+                        "description": "Mount Stage"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "PcbExitEvent-Mounter-Traceability": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "MchInfo",
+          "PcbInfo",
+          "MchPrdInfo"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "PcbExitEvent",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "2024/09/17 09:31:01",
+            "description": "YYYY/MM/DD HH:mm:ss"
+          },
+          "MchInfo": {
+            "$ref": "#/components/schemas/MachineInfo"
+          },
+          "PcbInfo": {
+            "type": "object",
+            "required": [
+              "PcbID",
+              "PgmName",
+              "PrdLot",
+              "PrdModel",
+              "PcbSide",
+              "FrontOpeID",
+              "RearOpeID",
+              "LaneNo",
+              "MountComplete",
+              "StartTime",
+              "FinishTime"
+            ],
+            "properties": {
+              "PcbID": {
+                "type": "string",
+                "example": "B30046701017367114329",
+                "description": "PCB ID"
+              },
+              "PgmName": {
+                "type": "string",
+                "example": "PEPPER_MICRO_467_QCA",
+                "description": "Program name"
+              },
+              "PrdLot": {
+                "type": "string",
+                "example": "173671",
+                "description": "Lot number of Production"
+              },
+              "PrdModel": {
+                "type": "string",
+                "example": "3.30999E+14",
+                "description": "Assembly number of the PCB specified in the program list"
+              },
+              "PcbSide": {
+                "type": "string",
+                "example": "",
+                "description": "Board surface information"
+              },
+              "FrontOpeID": {
+                "type": "string",
+                "example": "TSV:r.schmidt",
+                "description": "Operator ID (Front side)"
+              },
+              "RearOpeID": {
+                "type": "string",
+                "example": "",
+                "description": "Operator ID (Rear side)"
+              },
+              "LaneNo": {
+                "type": "integer",
+                "example": 1,
+                "description": "Lane number"
+              },
+              "MountComplete": {
+                "type": "integer",
+                "example": 1,
+                "description": "MountComplete: 0 = There are still machines to operate. 1 = Production of the last machine has finished."
+              },
+              "StartTime": {
+                "type": "string",
+                "example": "20240917093000000",
+                "description": "YYYYMMDDHHMMSSMMM"
+              },
+              "FinishTime": {
+                "type": "string",
+                "example": "20240917093101000",
+                "description": "YYYYMMDDHHMMSSMMM"
+              }
+            }
+          },
+          "MchPrdInfo": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "BlkNo",
+                "BlkID",
+                "MntDetail"
+              ],
+              "properties": {
+                "BlkNo": {
+                  "type": "integer",
+                  "example": 42,
+                  "description": "Block number"
+                },
+                "BlkID": {
+                  "type": "string",
+                  "example": "",
+                  "description": "Block ID"
+                },
+                "MntDetail": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "NotMnt",
+                      "MntNo",
+                      "RefName",
+                      "CmpNo",
+                      "MntTbl",
+                      "HeadNo",
+                      "CmpName",
+                      "CmpCmnt",
+                      "FdrTyp",
+                      "SetNo",
+                      "CmpID",
+                      "LotID",
+                      "ReelID",
+                      "FdrID",
+                      "MountSpeed",
+                      "MountSpeed2",
+                      "MountForce",
+                      "MountTimer",
+                      "PartsRecX",
+                      "PartsRecY",
+                      "PartsRecR",
+                      "NozzleType",
+                      "PickVacuumValue",
+                      "PreMountVacuumValue",
+                      "MountHeight",
+                      "CoplaSetValue",
+                      "CoplaRecValue",
+                      "MountDateTime",
+                      "TrayCompXPos",
+                      "TrayCompYPos",
+                      "Bincode",
+                      "NozzleID",
+                      "MntStage"
+                    ],
+                    "properties": {
+                      "NotMnt": {
+                        "type": "integer",
+                        "example": 1,
+                        "description": "Mount Completion: 0 = Success, 1 = Failure"
+                      },
+                      "MntNo": {
+                        "example": 897,
+                        "type": "integer",
+                        "description": "Mount number"
+                      },
+                      "RefName": {
+                        "type": "string",
+                        "example": "C27",
+                        "description": "Mount position name"
+                      },
+                      "CmpNo": {
+                        "type": "integer",
+                        "example": 11,
+                        "description": "Part number"
+                      },
+                      "MntTbl": {
+                        "type": "string",
+                        "example": "Tisch B",
+                        "description": "Table number"
+                      },
+                      "HeadNo": {
+                        "type": "integer",
+                        "example": 10,
+                        "description": "Head number"
+                      },
+                      "CmpName": {
+                        "type": "string",
+                        "example": "3.01006E+11",
+                        "description": "Part name"
+                      },
+                      "CmpCmnt": {
+                        "type": "string",
+                        "example": "Chipkond._X7R_100nF",
+                        "description": "Component comment for mounting pickup"
+                      },
+                      "FdrTyp": {
+                        "type": "string",
+                        "example": "8mm1005-Chip",
+                        "description": "Feeder type"
+                      },
+                      "SetNo": {
+                        "type": "integer",
+                        "example": 120,
+                        "description": "Set number"
+                      },
+                      "CmpID": {
+                        "type": "string",
+                        "example": "3.01006E+11",
+                        "description": "Part ID"
+                      },
+                      "LotID": {
+                        "type": "string",
+                        "example": "",
+                        "description": "Lot ID of parts"
+                      },
+                      "ReelID": {
+                        "type": "string",
+                        "example": "1.30434E+19",
+                        "description": "Reel ID"
+                      },
+                      "FdrID": {
+                        "type": "string",
+                        "example": "ZSY-008-0013108A",
+                        "description": "Feeder ID"
+                      },
+                      "MountSpeed": {
+                        "type": "integer",
+                        "example": 100,
+                        "description": "Mounting speed"
+                      },
+                      "MountSpeed2": {
+                        "type": "integer",
+                        "example": 0,
+                        "description": "Second stage speed"
+                      },
+                      "MountForce": {
+                        "type": "number",
+                        "example": 6.1,
+                        "description": "Mounting force"
+                      },
+                      "MountTimer": {
+                        "type": "number",
+                        "example": 0.1,
+                        "description": "Mounting timer"
+                      },
+                      "PartsRecX": {
+                        "type": "number",
+                        "example": 0.1,
+                        "description": "Correction value X"
+                      },
+                      "PartsRecY": {
+                        "type": "number",
+                        "example": 0.1,
+                        "description": "Correction value Y"
+                      },
+                      "PartsRecR": {
+                        "type": "number",
+                        "example": 0.1,
+                        "description": "Correction value R"
+                      },
+                      "NozzleType": {
+                        "type": "string",
+                        "example": "TYP-301",
+                        "description": "Nozzle type"
+                      },
+                      "NozzleID": {
+                        "type": "string",
+                        "example": "NOZZLE001",
+                        "description": "Nozzle ID"
+                      },
+                      "PickVacuumValue": {
+                        "type": "integer",
+                        "example": 164,
+                        "description": "Suction vacuum pressure (actual measured value)"
+                      },
+                      "PreMountVacuumValue": {
+                        "type": "integer",
+                        "example": 167,
+                        "description": "Vacuum pressure before mounting (actual measured value)"
+                      },
+                      "MountHeight": {
+                        "type": "number",
+                        "example": 0.2,
+                        "description": "Mounting height"
+                      },
+                      "CoplaSetValue": {
+                        "type": "integer",
+                        "example": 190,
+                        "description": "3D coplanarity tolerance (um) (set value)"
+                      },
+                      "CoplaRecValue": {
+                        "type": "integer",
+                        "example": 101,
+                        "description": "Maximum-minimum lead lift difference (actual measured value)"
+                      },
+                      "MountDateTime": {
+                        "type": "string",
+                        "example": "19000101000000000",
+                        "description": "Mount date time"
+                      },
+                      "TrayCompXPos": {
+                        "type": "integer",
+                        "example": 0,
+                        "description": "X position for Tray"
+                      },
+                      "TrayCompYPos": {
+                        "type": "integer",
+                        "example": 0,
+                        "description": "Y position for Tray"
+                      },
+                      "Bincode": {
+                        "type": "string",
+                        "example": "",
+                        "description": "Bin code"
+                      },
+                      "MntStage": {
+                        "type": "integer",
+                        "example": 1,
+                        "description": "Mount stage"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "PcbExitEvent-Aoi-RepairStation": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "MchInfo",
+          "TraceDate",
+          "PcbInfo",
+          "MchPrdInfo"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "PcbExitEvent",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20231006222410000",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "MchInfo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/MachineInfo"
+              },
+              {
+                "properties": {
+                  "MchName": {
+                    "example": "AOI"
+                  },
+                  "MchModel": {
+                    "example": "YRi-V-SL-SS-LR"
+                  },
+                  "LaneNo": {
+                    "description": "- For AOI Machine:\n  0 = All Lane  \n  1 = Lane1  \n  2 = Lane2  \n  3 = Lane3  \n  4 = Lane4\n- For Repair Station: LaneNo would be 0\n"
+                  },
+                  "LineName": {
+                    "description": "- For AOI Machine: Line name which is registered in the Yamaha System.\n- For Repair Station: The LineName would be an empty string (\"\").\n"
+                  }
+                }
+              }
+            ]
+          },
+          "PcbInfo": {
+            "type": "object",
+            "required": [
+              "PcbID",
+              "PgmName",
+              "LaneNo",
+              "PgmNo",
+              "PcbSide",
+              "FrontOpeID",
+              "RearOpeID",
+              "NgSteps",
+              "NgCmp",
+              "TotalSteps",
+              "CarryInTime",
+              "InspTime",
+              "CarryOutTime",
+              "ResolutionX",
+              "ResolutionY",
+              "PcbSizeX",
+              "PcbSizeY",
+              "CmpCount",
+              "LibCmpCount",
+              "BlkCount",
+              "ImgPath",
+              "FidMark"
+            ],
+            "properties": {
+              "PcbID": {
+                "type": "string",
+                "example": "1.00E+09",
+                "description": "PCB ID"
+              },
+              "PgmName": {
+                "type": "string",
+                "example": "BENDER_CC613_438_1124_V3_L(2)",
+                "description": "Program name"
+              },
+              "LaneNo": {
+                "type": "integer",
+                "example": 1,
+                "description": "Lane number"
+              },
+              "PgmNo": {
+                "type": "string",
+                "example": "393",
+                "description": "Inspection data management number"
+              },
+              "PcbSide": {
+                "type": "string",
+                "example": "0",
+                "description": "PCB inspection side: 0 = Side A, 1 = Side B"
+              },
+              "FrontOpeID": {
+                "type": "string",
+                "example": "UFER-D",
+                "description": "Operator ID (Front side)"
+              },
+              "RearOpeID": {
+                "type": "string",
+                "example": "",
+                "description": "Operator ID (Rear side)"
+              },
+              "NgSteps": {
+                "type": "string",
+                "example": "1",
+                "description": "Step number judged as NG"
+              },
+              "NgCmp": {
+                "type": "string",
+                "example": "1",
+                "description": "Part number judged as NG"
+              },
+              "TotalSteps": {
+                "type": "string",
+                "example": "4",
+                "description": "Number of recognized steps"
+              },
+              "CarryInTime": {
+                "type": "string",
+                "example": "4",
+                "description": "Time from standby position to PCB fixing completion"
+              },
+              "InspTime": {
+                "type": "string",
+                "example": "43.8",
+                "description": "Time from PCB fixing completion to PCB release completion"
+              },
+              "CarryOutTime": {
+                "type": "string",
+                "example": "0",
+                "description": "Time from PCB completion to transport out of machine"
+              },
+              "ResolutionX": {
+                "type": "string",
+                "example": "12.28",
+                "description": "Optical inspection camera resolution X"
+              },
+              "ResolutionY": {
+                "type": "string",
+                "example": "12.28",
+                "description": "Optical inspection camera resolution Y"
+              },
+              "RSOpeName": {
+                "type": "string",
+                "example": "",
+                "description": "Operator name at repair station"
+              },
+              "RSJudgeTime": {
+                "type": "string",
+                "example": "",
+                "description": "Re-judgment time at repair station"
+              },
+              "RSNgCmp": {
+                "type": "string",
+                "example": "-1",
+                "description": "NG part number judged at repair station"
+              },
+              "PcbSizeX": {
+                "type": "string",
+                "example": "325",
+                "description": "PCB size X"
+              },
+              "PcbSizeY": {
+                "type": "string",
+                "example": "250",
+                "description": "PCB size Y"
+              },
+              "CmpCount": {
+                "type": "string",
+                "example": "2976",
+                "description": "Number of components to be inspected"
+              },
+              "LibCmpCount": {
+                "type": "string",
+                "example": "56",
+                "description": "Number of inspected LIB components"
+              },
+              "BlkCount": {
+                "type": "string",
+                "example": "6",
+                "description": "Detected block number"
+              },
+              "ImgPath": {
+                "type": "string",
+                "example": "",
+                "description": "Repair image path ※Output when judged at AOI/Repair Station"
+              },
+              "FidMark": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "FidNo",
+                    "FidPosX",
+                    "FidPosY",
+                    "DetectPosX",
+                    "DetectPosY",
+                    "DetectRatio"
+                  ],
+                  "properties": {
+                    "FidNo": {
+                      "type": "string",
+                      "example": "0",
+                      "description": "Fiducial number"
+                    },
+                    "FidPosX": {
+                      "type": "string",
+                      "example": "4",
+                      "description": "Fiducial position X"
+                    },
+                    "FidPosY": {
+                      "type": "string",
+                      "example": "225",
+                      "description": "Fiducial position Y"
+                    },
+                    "DetectPosX": {
+                      "type": "string",
+                      "example": "4.041",
+                      "description": "Detected fiducial position X"
+                    },
+                    "DetectPosY": {
+                      "type": "string",
+                      "example": "225.369",
+                      "description": "Detected fiducial position Y"
+                    },
+                    "DetectRatio": {
+                      "type": "string",
+                      "example": "0",
+                      "description": "Match ratio"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "MchPrdInfo": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "BlkNo",
+                "InspDetail"
+              ],
+              "properties": {
+                "BlkNo": {
+                  "type": "integer",
+                  "example": 6,
+                  "description": "Block number"
+                },
+                "InspDetail": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "RefNo",
+                      "RefName",
+                      "ViewNo",
+                      "CmpNo",
+                      "CmpName",
+                      "LIBCmpName",
+                      "PartialType",
+                      "PinNo",
+                      "StepNo",
+                      "InspTypeNo",
+                      "InspType",
+                      "AlgorithmNo",
+                      "Algorithm",
+                      "NGReason",
+                      "LightNo",
+                      "AutoResult",
+                      "OPJudge",
+                      "StepCenterX",
+                      "StepCenterY",
+                      "StepSizeX",
+                      "StepSizeY",
+                      "DetectPosX1",
+                      "DetectPosY1",
+                      "DetectPosX2",
+                      "DetectPosY2",
+                      "OffsetX",
+                      "OffsetY",
+                      "OffsetR",
+                      "DetectValue",
+                      "MeasuredValue",
+                      "ImgPath"
+                    ],
+                    "properties": {
+                      "RefNo": {
+                        "type": "integer",
+                        "example": 1,
+                        "description": "Mount number"
+                      },
+                      "RefName": {
+                        "type": "string",
+                        "example": "CK11018",
+                        "description": "Reference name of mount point"
+                      },
+                      "ViewNo": {
+                        "type": "integer",
+                        "example": 1,
+                        "description": "View number"
+                      },
+                      "CmpNo": {
+                        "type": "integer",
+                        "example": 88,
+                        "description": "Part number"
+                      },
+                      "CmpName": {
+                        "type": "string",
+                        "example": "3.01E+11",
+                        "description": "Part name"
+                      },
+                      "LIBCmpName": {
+                        "type": "string",
+                        "example": "Brown",
+                        "description": "LIB part name"
+                      },
+                      "PartialType": {
+                        "type": "integer",
+                        "example": 0,
+                        "description": "Part item: 0 = main body, 1-10 = lead group number (n=1-10), 11 = DIP, 12 = adjacent, 15 = other"
+                      },
+                      "PinNo": {
+                        "type": "integer",
+                        "example": 0,
+                        "description": "Pin number"
+                      },
+                      "StepNo": {
+                        "type": "integer",
+                        "example": 2,
+                        "description": "Step number within component"
+                      },
+                      "InspTypeNo": {
+                        "type": "integer",
+                        "example": 8,
+                        "description": "Inspection number"
+                      },
+                      "InspType": {
+                        "type": "string",
+                        "example": "Datum Height Point",
+                        "description": "Inspection item (no component, position shift, opposite side, bridge, etc.)"
+                      },
+                      "AlgorithmNo": {
+                        "type": "integer",
+                        "example": 43,
+                        "description": "Inspection algorithm number"
+                      },
+                      "Algorithm": {
+                        "type": "string",
+                        "example": "3D Height",
+                        "description": "Inspection algorithm name"
+                      },
+                      "NGReason": {
+                        "type": "string",
+                        "example": "",
+                        "description": "NG reason"
+                      },
+                      "LightNo": {
+                        "type": "integer",
+                        "example": 1,
+                        "description": "Light setting number that succeeded in recognition"
+                      },
+                      "AutoResult": {
+                        "type": "integer",
+                        "example": 0,
+                        "description": "Automatic inspection result"
+                      },
+                      "OPJudge": {
+                        "type": "integer",
+                        "example": -1,
+                        "description": "Operator judgment result"
+                      },
+                      "StepCenterX": {
+                        "type": "number",
+                        "example": 298.512,
+                        "description": "Step center position X"
+                      },
+                      "StepCenterY": {
+                        "type": "number",
+                        "example": 23.707,
+                        "description": "Step center position Y"
+                      },
+                      "StepSizeX": {
+                        "type": "number",
+                        "example": 0.6,
+                        "description": "Step size X"
+                      },
+                      "StepSizeY": {
+                        "type": "number",
+                        "example": 0.3,
+                        "description": "Step size Y"
+                      },
+                      "DetectPosX1": {
+                        "type": "number",
+                        "example": 0.1,
+                        "description": "Detected upper left position X (including position correction)"
+                      },
+                      "DetectPosY1": {
+                        "type": "number",
+                        "example": 0.1,
+                        "description": "Detected upper left position Y (including position correction)"
+                      },
+                      "DetectPosX2": {
+                        "type": "number",
+                        "example": 0.1,
+                        "description": "Detected lower right position X (including position correction)"
+                      },
+                      "DetectPosY2": {
+                        "type": "number",
+                        "example": 0.1,
+                        "description": "Detected lower right position Y (including position correction)"
+                      },
+                      "OffsetX": {
+                        "type": "number",
+                        "example": 0.1,
+                        "description": "Offset amount X"
+                      },
+                      "OffsetY": {
+                        "type": "number",
+                        "example": 0.1,
+                        "description": "Offset amount Y"
+                      },
+                      "OffsetR": {
+                        "type": "number",
+                        "example": 0.1,
+                        "description": "Offset amount R"
+                      },
+                      "DetectValue": {
+                        "type": "string",
+                        "example": "0.086",
+                        "description": "Inspection detected value"
+                      },
+                      "MeasuredValue": {
+                        "type": "string",
+                        "example": "",
+                        "description": "Inspection measured value"
+                      },
+                      "ImgPath": {
+                        "type": "string",
+                        "example": "",
+                        "description": "Repair image path (Output when judged at repair station)"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "DisplayMessageResult-Request": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "ReciptNumber",
+          "Result",
+          "ResultMessage"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "DisplayMessageResult",
+            "description": "Function name of JSON\""
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250610161655596",
+            "description": "TraceDate Format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "ReciptNumber": {
+            "type": "string",
+            "example": "c7114219-1814-486c-87ca-3d4f6ad9a03c",
+            "description": "Unique ID(uuid)"
+          },
+          "Result": {
+            "type": "integer",
+            "example": 1,
+            "description": "Result Code of Command Reception: 1 = Success, 2 = Failure"
+          },
+          "ResultMessage": {
+            "type": "string",
+            "example": "1: OK",
+            "description": "Result code message."
+          }
+        }
+      },
+      "MachineOperationCommandResult-CUR": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "ReciptNumber",
+          "Result",
+          "ResultMessage",
+          "EmergencyStopState",
+          "InterlockState",
+          "OriginState",
+          "ErrorWaitingState",
+          "OperationState",
+          "PcbSelected",
+          "DataClassification",
+          "PcbName"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MachineOperationCommandResult",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250610162052767",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "ReciptNumber": {
+            "type": "string",
+            "example": "c7114219-1814-486c-87ca-3d4f6ad9a03c",
+            "description": "Unique ID(uuid)"
+          },
+          "Result": {
+            "type": "integer",
+            "example": 1,
+            "description": "Result Code of Command Reception: 1 = Success, 2 = Failure"
+          },
+          "ResultMessage": {
+            "type": "string",
+            "example": "1: OK",
+            "description": "Result code message."
+          },
+          "EmergencyStopState": {
+            "type": "string",
+            "example": "ON",
+            "description": "EmergencyStopState can have the following values - {\"OFF\", \"ON\"}"
+          },
+          "InterlockState": {
+            "type": "string",
+            "example": "OFF",
+            "description": "InterlockState can have the following values - {\"OFF\", \"ON\"}"
+          },
+          "OriginState": {
+            "type": "string",
+            "example": "INCOMPLETED",
+            "description": "OriginState can have the following values - {\"INCOMPLETED\", \"COMPLETED\"}"
+          },
+          "ErrorWaitingState": {
+            "type": "string",
+            "example": "NO",
+            "description": "ErrorWaitingState can have the following values - {\"NO\", \"YES\"}"
+          },
+          "OperationState": {
+            "type": "string",
+            "example": "RESET",
+            "description": "OperationState can have the following values - {\"WARM-UP\", \"RESET\", \"STOP\", \"STEP-RUNNING\", \"RUNNING\"}"
+          },
+          "PcbSelected": {
+            "type": "string",
+            "example": "NO",
+            "description": "PcbSelected can have the following values - {\"NO\", \"YES\"}"
+          },
+          "DataClassification": {
+            "type": "string",
+            "example": "YGZ",
+            "description": "DataClassification can have the following values -  {\"NONE\", \"VIOS\", \"XML\", \"TXT\", \"YGX\", \"YGZ\"}"
+          },
+          "PcbName": {
+            "type": "string",
+            "example": "",
+            "description": "PcbName field value is set using the PCB Name Field received in CUR Command Response"
+          }
+        }
+      },
+      "MachineOperationCommandResult-ORIGIN": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "ReciptNumber",
+          "Result",
+          "ResultMessage"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MachineOperationCommandResult",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250610162139138",
+            "description": "TraceDate format - YYYYMMDDHHMMSSMMM"
+          },
+          "ReciptNumber": {
+            "type": "string",
+            "example": "c7114219-1814-486c-87ca-3d4f6ad9a03c",
+            "description": "Unique ID(uuid)"
+          },
+          "Result": {
+            "type": "integer",
+            "example": 1,
+            "description": "Result Code of Command Reception: 1 = Success, 2 = Failure"
+          },
+          "ResultMessage": {
+            "type": "string",
+            "example": "1: OK",
+            "description": "Result code message."
+          }
+        }
+      },
+      "MachineOperationCommandResult-RUN": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "ReciptNumber",
+          "Result",
+          "ResultMessage"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MachineOperationCommandResult",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250610162738373",
+            "description": "TraceDate format - YYYYMMDDHHMMSSMMM"
+          },
+          "ReciptNumber": {
+            "type": "string",
+            "example": "c7114219-1814-486c-87ca-3d4f6ad9a03c",
+            "description": "Unique ID(uuid)"
+          },
+          "Result": {
+            "type": "integer",
+            "example": 1,
+            "description": "Result Code of Command Reception: 1 = Success, 2 = Failure"
+          },
+          "ResultMessage": {
+            "type": "string",
+            "example": "1: OK",
+            "description": "Result code message."
+          }
+        }
+      },
+      "MachineOperationCommandResult-STOP": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "ReciptNumber",
+          "Result",
+          "ResultMessage"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MachineOperationCommandResult",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250610162819014",
+            "description": "TraceDate format - YYYYMMDDHHMMSSMMM"
+          },
+          "ReciptNumber": {
+            "type": "string",
+            "example": "c7114219-1814-486c-87ca-3d4f6ad9a03c",
+            "description": "Unique ID(uuid)"
+          },
+          "Result": {
+            "type": "integer",
+            "example": 1,
+            "description": "Result Code of Command Reception: 1 = Success, 2 = Failure"
+          },
+          "ResultMessage": {
+            "type": "string",
+            "example": "1: OK",
+            "description": "Result code message."
+          }
+        }
+      },
+      "MachineOperationCommandResult-RESET": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "ReciptNumber",
+          "Result",
+          "ResultMessage"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MachineOperationCommandResult",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250610162900999",
+            "description": "TraceDate format - YYYYMMDDHHMMSSMMM"
+          },
+          "ReciptNumber": {
+            "type": "string",
+            "example": "c7114219-1814-486c-87ca-3d4f6ad9a03c",
+            "description": "Unique ID(uuid)"
+          },
+          "Result": {
+            "type": "integer",
+            "example": 1,
+            "description": "Result Code of Command Reception: 1 = Success, 2 = Failure"
+          },
+          "ResultMessage": {
+            "type": "string",
+            "example": "1: OK",
+            "description": "Result code message."
+          }
+        }
+      },
+      "MachineOperationCommandResult-ERRCLEAR": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "ReciptNumber",
+          "Result",
+          "ResultMessage"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MachineOperationCommandResult",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250610162955987",
+            "description": "TraceDate format - YYYYMMDDHHMMSSMMM"
+          },
+          "ReciptNumber": {
+            "type": "string",
+            "example": "c7114219-1814-486c-87ca-3d4f6ad9a03c",
+            "description": "Unique ID(uuid)"
+          },
+          "Result": {
+            "type": "integer",
+            "example": 1,
+            "description": "Result Code of Command Reception: 1 = Success, 2 = Failure"
+          },
+          "ResultMessage": {
+            "type": "string",
+            "example": "1: OK",
+            "description": "Result code message."
+          }
+        }
+      },
+      "MachineOperationCommandResult-SWI": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "ReciptNumber",
+          "Result",
+          "ResultMessage"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MachineOperationCommandResult",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250610163035811",
+            "description": "TraceDate format - YYYYMMDDHHMMSSMMM"
+          },
+          "ReciptNumber": {
+            "type": "string",
+            "example": "c7114219-1814-486c-87ca-3d4f6ad9a03c",
+            "description": "Unique ID(uuid)"
+          },
+          "Result": {
+            "type": "integer",
+            "example": 1,
+            "description": "Result Code of Command Reception: 1 = Success, 2 = Failure"
+          },
+          "ResultMessage": {
+            "type": "string",
+            "example": "1: OK",
+            "description": "Result code message."
+          }
+        }
+      },
+      "MachineOperationCommandResult-READEX": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "ReciptNumber",
+          "Result",
+          "ResultMessage",
+          "ProgramName",
+          "ProgramData"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MachineOperationCommandResult",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "description": "TraceDate format - YYYYMMDDHHMMSSMMM",
+            "example": "20250611175729851"
+          },
+          "ReciptNumber": {
+            "type": "string",
+            "example": "c7114219-1814-486c-87ca-3d4f6ad9a03c",
+            "description": "Unique ID(uuid)"
+          },
+          "Result": {
+            "type": "integer",
+            "example": 1,
+            "description": "Result Code of Command Reception: 1 = Success, 2 = Failure"
+          },
+          "ResultMessage": {
+            "type": "string",
+            "example": "1: OK",
+            "description": "Result code message."
+          },
+          "ProgramName": {
+            "type": "string",
+            "description": "Program Name",
+            "example": "PROGRAM_A01"
+          },
+          "ProgramData": {
+            "type": "string",
+            "example": "020013009b0101000004000000000000000000000000000000000000000",
+            "description": "ProgramData field value set with board information received in READEX Command Response"
+          }
+        }
+      },
+      "MachineOperationCommandResult-WRITEEX": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "ReciptNumber",
+          "Result",
+          "ResultMessage"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MachineOperationCommandResult",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250611174724880",
+            "description": "TraceDate format - YYYYMMDDHHMMSSMMM"
+          },
+          "ReciptNumber": {
+            "type": "string",
+            "example": "c7114219-1814-486c-87ca-3d4f6ad9a03c",
+            "description": "Unique ID(uuid)"
+          },
+          "Result": {
+            "type": "integer",
+            "example": 1,
+            "description": "Result Code of Command Reception: 1 = Success, 2 = Failure"
+          },
+          "ResultMessage": {
+            "type": "string",
+            "example": "1: OK",
+            "description": "Result code message."
+          }
+        }
+      },
+      "MachineOperationCommandResult-UPDATE_PARTS_REMAIN": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "ReciptNumber",
+          "Result",
+          "ResultMessage",
+          "ResultUpdatePartsRemain"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MachineOperationCommandResult",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250611173225362",
+            "description": "TraceDate format - YYYYMMDDHHMMSSMMM"
+          },
+          "ReciptNumber": {
+            "type": "string",
+            "example": "c7114219-1814-486c-87ca-3d4f6ad9a03c",
+            "description": "Unique ID(uuid)"
+          },
+          "Result": {
+            "type": "integer",
+            "example": 1,
+            "description": "Result Code of Command Reception: 1 = Success, 2 = Failure"
+          },
+          "ResultMessage": {
+            "type": "string",
+            "example": "1: OK",
+            "description": "Result code message."
+          },
+          "ResultUpdatePartsRemain": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "CmpID",
+                "UniqueID",
+                "AfterCount",
+                "Result"
+              ],
+              "properties": {
+                "CmpID": {
+                  "type": "string",
+                  "example": "PARTS001",
+                  "description": "Part ID"
+                },
+                "UniqueID": {
+                  "type": "string",
+                  "example": "REEL001",
+                  "description": "Reel ID"
+                },
+                "AfterCount": {
+                  "type": "integer",
+                  "example": 4321,
+                  "description": "Reel remaining count"
+                },
+                "Result": {
+                  "type": "integer",
+                  "example": 0,
+                  "description": "Result of update per part:\n- 0 = Success\n- 1 = Remaining number counter invalid, setup verify invalid\n- 2 = Parameter error (value, range, etc)\n- 3 = Non-existent parts\n- 4 = Upper limit of parts in production use exceeded\n"
+                }
+              }
+            }
+          }
+        }
+      },
+      "MachineOperationCommandResult-REGISTER_PARTS": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "ReciptNumber",
+          "Result",
+          "ResultMessage",
+          "ResultRegisterParts"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MachineOperationCommandResult",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250618183534950",
+            "description": "TraceDate format - YYYYMMDDHHMMSSMMM"
+          },
+          "ReciptNumber": {
+            "type": "string",
+            "example": "c7114219-1814-486c-87ca-3d4f6ad9a03c",
+            "description": "Unique ID(uuid)"
+          },
+          "Result": {
+            "type": "integer",
+            "example": 1,
+            "description": "Result Code of Command Reception: 1 = Success, 2 = Failure"
+          },
+          "ResultMessage": {
+            "type": "string",
+            "example": "1: OK",
+            "description": "Result code message."
+          },
+          "ResultRegisterParts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "CmpID",
+                "CmpName",
+                "FeederType",
+                "Quantity",
+                "Result"
+              ],
+              "properties": {
+                "CmpID": {
+                  "type": "string",
+                  "example": "PARTS001",
+                  "description": "Parts ID"
+                },
+                "CmpName": {
+                  "type": "string",
+                  "example": "PARTS001",
+                  "description": "Parts Name"
+                },
+                "FeederType": {
+                  "type": "integer",
+                  "example": 0,
+                  "description": "Feeder Type"
+                },
+                "Quantity": {
+                  "type": "integer",
+                  "example": 5000,
+                  "description": "Standard Number of Package"
+                },
+                "Result": {
+                  "type": "integer",
+                  "example": 0,
+                  "description": "Result of registration per part: 0 = Success, 1 = Failed, 2 = Format Error"
+                }
+              }
+            }
+          }
+        }
+      },
+      "MachineOperationCommandResult-REMOTE_SCAN": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "ReciptNumber",
+          "Result",
+          "ResultMessage",
+          "Operation",
+          "RemoteResult",
+          "Message",
+          "Params"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MachineOperationCommandResult",
+            "description": "Function name of JSON\""
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250618190000123",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "ReciptNumber": {
+            "type": "string",
+            "example": "c7114219-1814-486c-87ca-3d4f6ad9a03c",
+            "description": "Unique ID(uuid)"
+          },
+          "Result": {
+            "type": "integer",
+            "example": 1,
+            "description": "Result Code of Command Reception: 1 = Success, 2 = Failure"
+          },
+          "ResultMessage": {
+            "type": "string",
+            "example": "1: OK",
+            "description": "Result code message."
+          },
+          "Operation": {
+            "type": "integer",
+            "example": 0,
+            "description": "Operation: 0 = PartsSetup, 1 = Splicing, 2 = MagazineSetup"
+          },
+          "RemoteResult": {
+            "type": "string",
+            "example": "OK",
+            "description": "Validation result from MES"
+          },
+          "Message": {
+            "type": "string",
+            "example": "",
+            "description": "If the command is not executed, the reason will be given"
+          },
+          "Params": {
+            "type": "array",
+            "description": "Parameters",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "MachineOperationCommandResult-LOCK_PANEL": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "ReciptNumber",
+          "Result",
+          "ResultMessage",
+          "Lock"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MachineOperationCommandResult",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250618190000123",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "Lock": {
+            "type": "integer",
+            "example": 1,
+            "description": "Lock Flag:\n- 0 = Unlock\n- 1 = Lock\n- 2 ~ 4294967295 = Reserved or other lock states\n"
+          },
+          "ReciptNumber": {
+            "type": "string",
+            "example": "c7114219-1814-486c-87ca-3d4f6ad9a03c",
+            "description": "Unique ID(uuid)"
+          },
+          "Result": {
+            "type": "integer",
+            "example": 1,
+            "description": "Result Code of Command Reception: 1 = Success, 2 = Failure"
+          },
+          "ResultMessage": {
+            "type": "string",
+            "example": "1: OK",
+            "description": "Result code message."
+          }
+        }
+      },
+      "MachineOperationCommandResult-BLOCK_PARTS": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "ReciptNumber",
+          "Result",
+          "ResultMessage",
+          "FailedMaterialPackages"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MachineOperationCommandResult",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250618190230456",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "ReciptNumber": {
+            "type": "string",
+            "example": "6f803a7a-31e4-443b-bb89-bd76a1e0a1cc",
+            "description": "Unique ID(uuid)"
+          },
+          "FailedMaterialPackages": {
+            "type": "array",
+            "description": "An array containing Reel ID, Stick ID, or Tray ID that failed to be unblocked",
+            "items": {
+              "type": "string",
+              "example": "REEL001"
+            }
+          },
+          "Result": {
+            "type": "integer",
+            "example": 1,
+            "description": "Result Code of Command Reception: 1 = Success, 2 = Failure"
+          },
+          "ResultMessage": {
+            "type": "string",
+            "example": "1: OK",
+            "description": "Result code message."
+          }
+        }
+      },
+      "MachineOperationCommandResult-UNBLOCK_PARTS": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "ReciptNumber",
+          "Result",
+          "ResultMessage",
+          "FailedMaterialPackages"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MachineOperationCommandResult",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250618190555999",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "ReciptNumber": {
+            "type": "string",
+            "example": "b37d293a-2e4d-4321-a7de-89cb0fd27c3f",
+            "description": "Unique ID(uuid)"
+          },
+          "FailedMaterialPackages": {
+            "type": "array",
+            "description": "An array containing a list of Reel ID, Stick ID, or Tray ID that failed to be unblocked",
+            "items": {
+              "type": "string",
+              "example": "REEL001"
+            }
+          },
+          "Result": {
+            "type": "integer",
+            "example": 1,
+            "description": "Result Code of Command Reception: 1 = Success, 2 = Failure"
+          },
+          "ResultMessage": {
+            "type": "string",
+            "example": "1: OK",
+            "description": "Result code message"
+          }
+        }
+      },
+      "MachineOperationCommandResult-BLOCK_LOCATIONS": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "ReciptNumber",
+          "Result",
+          "ResultMessage",
+          "FailedMaterialLocations"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MachineOperationCommandResult",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250618191000000",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "ReciptNumber": {
+            "type": "string",
+            "example": "a1b2c3d4-5678-9101-1121-314151617181",
+            "description": "Unique ID(uuid)"
+          },
+          "FailedMaterialLocations": {
+            "type": "array",
+            "description": "An array containing a list of set locations that failed to be blocked",
+            "items": {
+              "type": "object",
+              "required": [
+                "CarrierID",
+                "SetNo"
+              ],
+              "properties": {
+                "CarrierID": {
+                  "type": "string",
+                  "example": "CART01",
+                  "description": "Cart ID, Magazine ID, or null of set location"
+                },
+                "SetNo": {
+                  "type": "integer",
+                  "example": 25,
+                  "description": "Set number of the location.\n- If CarrierID is specified: set number within that carrier\n- If CarrierID is null: set number within the whole machine\n"
+                }
+              }
+            }
+          },
+          "Result": {
+            "type": "integer",
+            "example": 1,
+            "description": "Result Code of Command Reception: 1 = Success, 2 = Failure"
+          },
+          "ResultMessage": {
+            "type": "string",
+            "example": "1: OK",
+            "description": "Result code message"
+          }
+        }
+      },
+      "MachineOperationCommandResult-UNBLOCK_LOCATIONS": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "ReciptNumber",
+          "Result",
+          "ResultMessage",
+          "FailedMaterialLocations"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MachineOperationCommandResult",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250618191100000",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "ReciptNumber": {
+            "type": "string",
+            "example": "b2c3d4e5-6789-1011-1213-141516171819",
+            "description": "Unique ID(uuid)"
+          },
+          "FailedMaterialLocations": {
+            "type": "array",
+            "description": "An array containing a list of set locations that failed to be unblocked",
+            "items": {
+              "type": "object",
+              "required": [
+                "CarrierID",
+                "SetNo"
+              ],
+              "properties": {
+                "CarrierID": {
+                  "type": "string",
+                  "example": "MAGAZINE02",
+                  "description": "Cart ID, Magazine ID, or null of set location"
+                },
+                "SetNo": {
+                  "type": "integer",
+                  "example": 7,
+                  "description": "Set number of the location.\n- If CarrierID is specified: set number within that carrier\n- If CarrierID is null: set number within the whole machine\n"
+                }
+              }
+            }
+          },
+          "Result": {
+            "type": "integer",
+            "example": 2,
+            "description": "Result Code of Command Reception: 1 = Success, 2 = Failure"
+          },
+          "ResultMessage": {
+            "type": "string",
+            "example": "1: OK",
+            "description": "Result code message"
+          }
+        }
+      },
+      "CmpStatusReport-Response": {
+        "type": "object",
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "CmpStatusReport",
+            "description": "Function name of JSON"
+          }
+        }
+      },
+      "DetectedPartsKnotReport-Response": {
+        "type": "object",
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "DetectedPartsKnotReport",
+            "description": "Function name of JSON"
+          }
+        }
+      },
+      "MaintenanceReport-Response": {
+        "type": "object",
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MaintenanceReport",
+            "description": "Function name of JSON"
+          }
+        }
+      },
+      "MaterialRequest-Response": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "MchInfo",
+          "Err",
+          "ErrMsg",
+          "Component"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MaterialRequest",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20250709115731934",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "MchInfo": {
+            "$ref": "#/components/schemas/MachineInfo"
+          },
+          "Err": {
+            "type": "integer",
+            "example": 1,
+            "description": "Result Code: 0 = OK, 1 = Error — any value other than 0 is treated as an error"
+          },
+          "ErrMsg": {
+            "type": "string",
+            "example": "This is Dummy Error Message for Automation Testing",
+            "description": "Error message sent from MES, displayed on the machine screen"
+          },
+          "Component": {
+            "type": "object",
+            "required": [
+              "ReelID",
+              "OrderID",
+              "CmpID",
+              "LotID",
+              "Qty",
+              "Rank"
+            ],
+            "properties": {
+              "ReelID": {
+                "type": "string",
+                "example": "1234",
+                "description": "Scanned reel ID"
+              },
+              "OrderID": {
+                "type": "string",
+                "example": "0",
+                "description": "Track ID in the Yamaha system"
+              },
+              "CmpID": {
+                "type": "string",
+                "example": "AIJF1247-3",
+                "description": "Part ID of the scanned reel"
+              },
+              "LotID": {
+                "type": "string",
+                "example": "LOT1234",
+                "description": "Lot ID of the scanned reel"
+              },
+              "Qty": {
+                "type": "integer",
+                "example": 1000,
+                "description": "Remaining part quantity of the scanned reel"
+              },
+              "Rank": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "example": [
+                  "A",
+                  "B",
+                  "C",
+                  "D",
+                  "E"
+                ],
+                "description": "LED rank (Empty array if no LED rank, e.g. [])"
+              }
+            }
+          }
+        }
+      },
+      "MchStatusChange-Response": {
+        "type": "object",
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MchStatusChange",
+            "description": "Function name of JSON"
+          }
+        }
+      },
+      "PcbEntryEvent-Response": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "MchInfo",
+          "Err",
+          "ErrMsg",
+          "PcbInfo",
+          "Blk"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "PcbEntryEvent",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20200225174902000",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "MchInfo": {
+            "$ref": "#/components/schemas/MachineInfo"
+          },
+          "Err": {
+            "type": "integer",
+            "example": 0,
+            "description": "Result Code: 0 = OK, 1 = Error — any value other than 0 is treated as an error."
+          },
+          "ErrMsg": {
+            "type": "string",
+            "example": "",
+            "description": "Error message sent from MES, displayed on the machine screen."
+          },
+          "PcbInfo": {
+            "type": "object",
+            "required": [
+              "PcbID",
+              "PgmName"
+            ],
+            "properties": {
+              "PcbID": {
+                "type": "string",
+                "example": "18310013012009236037",
+                "description": "PCB ID"
+              },
+              "PgmName": {
+                "type": "string",
+                "example": "190991_T",
+                "description": "Program name"
+              }
+            }
+          },
+          "Blk": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "BlkNo",
+                "Mount"
+              ],
+              "properties": {
+                "BlkNo": {
+                  "type": "string",
+                  "example": "2110600001",
+                  "description": "Block ID of the PCB"
+                },
+                "Mount": {
+                  "type": "integer",
+                  "example": 1,
+                  "description": "Information about whether to mount or not"
+                }
+              }
+            }
+          }
+        }
+      },
+      "PcbExitEvent-Response": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "MchInfo",
+          "Err",
+          "ErrMsg",
+          "PcbInfo"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "PcbExitEvent",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20200225174902000",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "MchInfo": {
+            "$ref": "#/components/schemas/MachineInfo"
+          },
+          "Err": {
+            "type": "integer",
+            "example": 0,
+            "description": "Result Code: 0 = OK, 1 = Error — any value other than 0 is treated as an error"
+          },
+          "ErrMsg": {
+            "type": "string",
+            "example": "This is a Dummy error message",
+            "description": "Error message"
+          },
+          "PcbInfo": {
+            "type": "object",
+            "required": [
+              "PcbID",
+              "PgmName"
+            ],
+            "properties": {
+              "PcbID": {
+                "type": "string",
+                "example": "18310013012009236037",
+                "description": "PCB ID"
+              },
+              "PgmName": {
+                "type": "string",
+                "example": "190991_T",
+                "description": "Program name"
+              }
+            }
+          }
+        }
+      },
+      "PgmSwitched-Response": {
+        "type": "object",
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "PgmSwitched",
+            "description": "Function name of JSON"
+          }
+        }
+      },
+      "SetupRequest-Response": {
+        "type": "object",
+        "required": [
+          "FuncName",
+          "TraceDate",
+          "MchInfo",
+          "Message",
+          "SetInfos"
+        ],
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "SetupRequest",
+            "description": "Function name of JSON"
+          },
+          "TraceDate": {
+            "type": "string",
+            "example": "20200225174902000",
+            "description": "TraceDate format - \"YYYYMMDDHHMMSSMMM\""
+          },
+          "MchInfo": {
+            "$ref": "#/components/schemas/MachineInfo"
+          },
+          "Message": {
+            "type": "string",
+            "example": "Setup Info Response Message",
+            "description": "Please set result description here"
+          },
+          "SetInfos": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "Operation",
+                "CarrierInfos"
+              ],
+              "properties": {
+                "Operation": {
+                  "type": "integer",
+                  "example": null,
+                  "description": "User operation:\n- 1 = Cart Setup\n- 3 = Magazine Setup\n- 5 = Feeder Setup\n- 7 = Parts Setup\n- 9 = Splicing_Joined\n- 41 = Program_Switch\n"
+                },
+                "CarrierInfos": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "SetNo",
+                      "Type",
+                      "Result"
+                    ],
+                    "properties": {
+                      "SetNo": {
+                        "type": "integer",
+                        "example": 1,
+                        "description": "Set position on the machine"
+                      },
+                      "Type": {
+                        "type": "integer",
+                        "example": 0,
+                        "description": "Package: 0 = tape, 1 = stick, 3 = tray"
+                      },
+                      "Result": {
+                        "type": "integer",
+                        "example": 0,
+                        "description": "Each setup verification result: 0 = OK, 1 = NG"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "SetupRemoved-Response": {
+        "type": "object",
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "SetupRemoved",
+            "description": "Function name of JSON"
+          }
+        }
+      },
+      "SensorPartsRemainCorrection-Response": {
+        "type": "object",
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "SensorPartsRemainCorrection",
+            "description": "Function name of JSON\""
+          }
+        }
+      },
+      "DisplayMessageResult-Response": {
+        "type": "object",
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "DisplayMessageResult",
+            "description": "Function name of JSON"
+          }
+        }
+      },
+      "MachineOperationCommandResult-Response": {
+        "type": "object",
+        "properties": {
+          "FuncName": {
+            "type": "string",
+            "example": "MachineOperationCommandResult",
+            "description": "Function name of JSON"
+          }
+        }
+      }
+    },
+    "examples": {
+      "CmpStatusReport-Request": {
+        "summary": "CmpStatusReport API Specification",
+        "value": {
+          "FuncName": "CmpStatusReport",
+          "TraceDate": "20241127105736613",
+          "MchInfo": {
+            "MchName": "MOUNTER",
+            "MchSerial": "Y30001",
+            "MchModel": "YSM20-SL-SS-LR",
+            "LaneNo": 0,
+            "LineName": "Line-1"
+          },
+          "CmpStatus": [
+            {
+              "SetPos": 33,
+              "Status": "1",
+              "CartID": "CTZ3$32$2433262$12",
+              "FdrID": "ZSY-008-8037651C",
+              "FdrName": "8mmTape",
+              "MgznID": "",
+              "ReelID": "442862",
+              "LotID": "5002225780",
+              "CmpName": "5146CWTC21054",
+              "CmpID": "5146CWTC21054",
+              "CmpCmnt": "",
+              "UsedLane": "1",
+              "Qty": 495,
+              "AvailTime": "",
+              "AvailCount": "99",
+              "TimeLimit": "19000101000000000",
+              "Rank": [
+                "",
+                "",
+                "",
+                "",
+                ""
+              ],
+              "Package": 0,
+              "CmpNum": 0,
+              "OriginalCmpNum": 0,
+              "Pitch": "",
+              "Width": 0,
+              "CellCountX": 0,
+              "CellCountY": 0,
+              "CartName": ""
+            }
+          ]
+        }
+      },
+      "DetectedPartsKnotReport-Request": {
+        "summary": "DetectedPartsKnotReport API Specification",
+        "value": {
+          "FuncName": "DetectedPartsKnotReport",
+          "TraceDate": "20250610104717658",
+          "MchInfo": {
+            "MchName": "MOUNTER",
+            "MchSerial": "Y30001",
+            "MchModel": "YSM20-SL-SS-LR",
+            "LaneNo": 1,
+            "LineName": "Line1"
+          },
+          "SplicingStatus": {
+            "SetPos": 0,
+            "OldReelID": "OldReel",
+            "NewReelID": "NewReel"
+          }
+        }
+      },
+      "MaintenanceReport-Mounter-Request": {
+        "summary": "MaintenanceReport API Specification for Mounter Machine",
+        "value": {
+          "FuncName": "MaintenanceReport",
+          "TraceDate": "20250610153315493",
+          "MchInfo": {
+            "MchName": "YM300",
+            "MchSerial": "YM300",
+            "MchModel": "YCP10-SL-SS-LR",
+            "LaneNo": 1,
+            "LineName": "Line1"
+          },
+          "MaintenanceInfos": [
+            {
+              "Type": 0,
+              "FeederInfos": [
+                {
+                  "ErrorType": 1,
+                  "SetNum": 1,
+                  "UniqueID": "ZSY-008-000001",
+                  "ErrorKind": 0,
+                  "ErrorTiming": 0,
+                  "FeederDriveCount": 123456,
+                  "FedderMacsCorrectX": null,
+                  "FeederMacsCorrectY": null,
+                  "PickUpErrorRate": null,
+                  "ALFTapeGuideDriveCount": null,
+                  "MaintenanceSettings": {
+                    "FeederDriveCount": [
+                      5000000,
+                      7000000
+                    ],
+                    "FeederMacsCorrectX": [
+                      0.2,
+                      0
+                    ],
+                    "FeederMacsCorrectY": [
+                      0.2,
+                      0
+                    ],
+                    "PickUpErrorRate": [
+                      1,
+                      0
+                    ],
+                    "ALFTapeGuideDriveCount": [
+                      5000000,
+                      7000000
+                    ],
+                    "PickUpSamples": 100
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "MaintenanceReport-SSTuneUpStation-Request": {
+        "summary": "MaintenanceReport API Specification for SSTUNEUPSTATION Machine",
+        "value": {
+          "FuncName": "MaintenanceReport",
+          "TraceDate": "20250618161052967",
+          "MchInfo": {
+            "MchName": "YS3001",
+            "MchSerial": "YS3001",
+            "MchModel": "SSTUNEUPSTATION",
+            "LaneNo": 0,
+            "LineName": ""
+          },
+          "MaintenanceInfos": [
+            {
+              "Type": 1,
+              "SSTuneUpStationHistory": [
+                {
+                  "FeederID": "ZSY-008-2031249C",
+                  "Manufactured": "2022-11-22",
+                  "MeasuredDate": "2023-09-26",
+                  "IsAdjust": "-1",
+                  "DrvCount": "162",
+                  "BadX": "-3.192148E-02",
+                  "AveX": "-1.848449E-02",
+                  "RangeX": "2.809266E-02",
+                  "ThreeSigmaX": "2.352017E-02",
+                  "CpkX": "2.82802",
+                  "BadY": "-1.542626E-02",
+                  "AveY": "-3.581737E-03",
+                  "RangeY": "1.794062E-02",
+                  "ThreeSigmaY": "1.099317E-02",
+                  "CpkY": "6.496604"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "MaterialRequest-Request": {
+        "summary": "MaterialRequest API Specification",
+        "value": {
+          "FuncName": "MaterialRequest",
+          "TraceDate": "20250610150019708",
+          "MchInfo": {
+            "MchName": "MOUNTER",
+            "MchSerial": "Y30001",
+            "MchModel": "YSM20-SL-SS-LR",
+            "LaneNo": 1,
+            "LineName": "Line1"
+          },
+          "Component": {
+            "ReelID": "1234",
+            "OrderID": "0",
+            "Assy": "",
+            "LotID": "",
+            "SurfaceInfo": "",
+            "BoardName": ""
+          }
+        }
+      },
+      "MchStatusChange-Request": {
+        "summary": "MchStatusChange API Specification",
+        "value": {
+          "FuncName": "MchStatusChange",
+          "TraceDate": "20250618155651668",
+          "MchInfo": {
+            "MchName": "MOUNTER",
+            "MchSerial": "Y30001",
+            "MchModel": "YSM20-SL-SS-LR",
+            "LaneNo": 1,
+            "LineName": "Line1"
+          },
+          "MchStatus": {
+            "Old": 1,
+            "New": 0,
+            "Additional": ""
+          }
+        }
+      },
+      "PcbEntryEvent-Request": {
+        "summary": "PcbEntryEvent API Specification",
+        "value": {
+          "FuncName": "PcbEntryEvent",
+          "TraceDate": "20250610130839394",
+          "MchInfo": {
+            "MchName": "MOUNTER",
+            "MchSerial": "Y30001",
+            "MchModel": "YSM20-SL-SS-LR",
+            "LaneNo": 1,
+            "LineName": "Line1"
+          },
+          "PcbInfo": {
+            "PcbID": "1234",
+            "PgmName": ""
+          }
+        }
+      },
+      "PgmSwitched-Request": {
+        "summary": "PgmSwitched API Specification",
+        "value": {
+          "FuncName": "PgmSwitched",
+          "TraceDate": "20250618180512053",
+          "MchInfo": {
+            "MchName": "MOUNTER",
+            "MchSerial": "Y30001",
+            "MchModel": "YSM20-SL-SS-LR",
+            "LaneNo": 1,
+            "LineName": "Line1"
+          },
+          "PgmInfo": {
+            "PgmName": "PCB01",
+            "NumberOfLane": 0,
+            "LanePgmInfo": [
+              {
+                "Lane": 1,
+                "PgmName": "PCB01"
+              },
+              {
+                "Lane": 2,
+                "PgmName": ""
+              }
+            ]
+          }
+        }
+      },
+      "PgmSwitched-With-BoardData-Request": {
+        "summary": "PgmSwitched API Specification With Board Data information",
+        "value": {
+          "FuncName": "PgmSwitched",
+          "TraceDate": "20250611124459724",
+          "MchInfo": {
+            "MchName": "MOUNTER",
+            "MchSerial": "Y30001",
+            "MchModel": "YSM20-SL-SS-LR",
+            "LaneNo": 1,
+            "LineName": "Line1"
+          },
+          "PgmInfo": {
+            "PgmName": "Sample_PgmName",
+            "NumberOfLane": 0,
+            "LanePgmInfo": [
+              {
+                "Lane": 0,
+                "PgmName": "",
+                "PgmData": "",
+                "Result": 2,
+                "ResultMessage": "8: NOSUCHPCB"
+              },
+              {
+                "Lane": 1,
+                "PgmName": "",
+                "PgmData": "",
+                "Result": 1,
+                "ResultMessage": "8: NOSUCHPCB"
+              }
+            ]
+          }
+        }
+      },
+      "SetupRequest-Request": {
+        "summary": "SetupRequest  API Specification",
+        "value": {
+          "FuncName": "SetupRequest",
+          "TraceDate": "20250610152514960",
+          "MchInfo": {
+            "MchName": "MOUNTER",
+            "MchSerial": "Y30001",
+            "MchModel": "YSM20-SL-SS-LR",
+            "LaneNo": 1,
+            "LineName": "Line1"
+          },
+          "SetInfos": [
+            {
+              "CarrierInfos": [
+                {
+                  "CmpInfos": [
+                    {
+                      "CmpID": "PARTS001",
+                      "Qty": 5000,
+                      "UniqueID": "123456002"
+                    }
+                  ],
+                  "MountInfos": [
+                    {
+                      "BlockNo": 0,
+                      "SilkInfos": [
+                        {
+                          "MountNo": 1,
+                          "Silk": "Pattern1"
+                        },
+                        {
+                          "MountNo": 2,
+                          "Silk": "Pattern2"
+                        }
+                      ]
+                    }
+                  ],
+                  "Name": "8mmTape",
+                  "SetNo": 25,
+                  "Type": 0,
+                  "UniqueID": "ZSY-008-1234025"
+                }
+              ],
+              "LocationID": "CTZ1$32$653941$12",
+              "Operation": 1
+            }
+          ]
+        }
+      },
+      "SetupRemoved-Request": {
+        "summary": "SetupRemoved  API Specification",
+        "value": {
+          "FuncName": "SetupRemoved",
+          "TraceDate": "20250610153110560",
+          "MchInfo": {
+            "MchName": "MOUNTER",
+            "MchSerial": "Y30001",
+            "MchModel": "YSM20-SL-SS-LR",
+            "LaneNo": 1,
+            "LineName": "Line1"
+          },
+          "SetInfos": [
+            {
+              "CarrierInfos": [
+                {
+                  "CmpInfos": [
+                    {
+                      "CmpID": "PARTS001",
+                      "Qty": 5000,
+                      "UniqueID": "123456002"
+                    }
+                  ],
+                  "MountInfos": [
+                    {
+                      "BlockNo": 0,
+                      "SilkInfos": [
+                        {
+                          "MountNo": 1,
+                          "Silk": "001"
+                        },
+                        {
+                          "MountNo": 2,
+                          "Silk": "002"
+                        }
+                      ]
+                    }
+                  ],
+                  "Name": "8mmTape",
+                  "SetNo": 25,
+                  "Type": 0,
+                  "UniqueID": "ZSY-008-1234025"
+                }
+              ],
+              "LocationID": "CTZ1$32$653941$12",
+              "Operation": 2
+            }
+          ]
+        }
+      },
+      "SensorPartsRemainCorrection-Request": {
+        "summary": "SensorPartsRemainCorrectionReport API Specification",
+        "value": {
+          "FuncName": "SensorPartsRemainCorrectionReport",
+          "TraceDate": "20250610155439612",
+          "MchInfo": {
+            "MchName": "MOUNTER",
+            "MchSerial": "Y30001",
+            "MchModel": "YSM20-SL-SS-LR",
+            "LaneNo": 1,
+            "LineName": "Line1"
+          },
+          "SensorPartsRemainCorrection": {
+            "CmpID": "PARTSID001",
+            "UniqueID": "REEL001",
+            "SetNum": 31,
+            "FeederID": "ZSY-008-000001",
+            "CorrectionNum": -50,
+            "AfterCorrectionNum": 30
+          }
+        }
+      },
+      "PcbExitEvent-Printer-Request": {
+        "summary": "PcbExitEvent Printer API Specification",
+        "value": {
+          "FuncName": "PcbExitEvent",
+          "TraceDate": "20250404143546315",
+          "MchInfo": {
+            "MchName": "PRINTER",
+            "MchSerial": "Y30001",
+            "MchModel": "YSP20-SL-SS-LR",
+            "LaneNo": 0,
+            "LineName": "Line-1"
+          },
+          "PcbInfo": {
+            "PcbID": "1003402337",
+            "PgmName": "Infineon_PG-DFN-8-1",
+            "PrdLot": "",
+            "PrdModel": "",
+            "PcbSide": "",
+            "FrontOpeID": "",
+            "RearOpeID": "",
+            "LaneNo": 1,
+            "MountComplete": 1
+          },
+          "MchPrdInfo": {
+            "SqgDirection": "RF",
+            "SqgSpeed": 50,
+            "SqgPress": 50,
+            "SqgPressMax": 51.413,
+            "SqgPressMin": 49.497,
+            "AirconTempErr": 0,
+            "F.MaskOffsetX": -0.073,
+            "F.MaskOffsetY": 0.103,
+            "F.MaskOffsetZ": 0,
+            "F.MaskOffsetR": 0.008,
+            "B.MaskOffsetX": -0.073,
+            "B.MaskOffsetY": 0.103,
+            "B.MaskOffsetZ": 0,
+            "B.MaskOffsetR": 0.008,
+            "RollingWidth": 10.118,
+            "PrintCT": 8.2234,
+            "TransferCT": 6.121345,
+            "MaskID": "Z8B00188122",
+            "MaskSerial": "000057635",
+            "SolderID": "7025520-Z07-EN",
+            "SolderSerial": "Y49684",
+            "SqgID": "",
+            "SqgSerial": "",
+            "UserDef": []
+          }
+        }
+      },
+      "PcbExitEvent-Mounter-PcbCompleted-Request": {
+        "summary": "PcbExitEvent for Mounter Machine using PCB_COMPLETED report API Specification",
+        "value": {
+          "FuncName": "PcbExitEvent",
+          "MchInfo": {
+            "MchName": "MOUNTER",
+            "MchSerial": "Y30001",
+            "MchModel": "YSM20-SL-SS-LR",
+            "LaneNo": 1,
+            "LineName": "Line1"
+          },
+          "TraceDate": "20240917093101000",
+          "PcbInfo": {
+            "PcbID": "B30046701017367114329",
+            "PgmName": "PEPPER_MICRO_467_QCA",
+            "PrdLot": "173671",
+            "PrdModel": "3.30999E+14",
+            "PcbSide": "",
+            "FrontOpeID": "TSV:r.schmidt",
+            "RearOpeID": "",
+            "LaneNo": 1,
+            "MountComplete": 1
+          },
+          "MchPrdInfo": [
+            {
+              "BlkNo": 42,
+              "BlkID": "",
+              "MntDetail": [
+                {
+                  "MntNo": 897,
+                  "NotMnt": 1,
+                  "RefName": "C27",
+                  "CmpNo": 11,
+                  "MntTbl": "Tisch B",
+                  "HeadNo": 10,
+                  "CmpName": "3.01006E+11",
+                  "CmpCmnt": "Chipkond._X7R_100nF",
+                  "FdrTyp": "8mm1005-Chip",
+                  "SetNo": 120,
+                  "CmpID": "3.01006E+11",
+                  "LotID": "",
+                  "ReelID": "1.30434E+19",
+                  "FdrID": "ZSY-008-0013108A",
+                  "MountSpeed": 100,
+                  "MountSpeed2": 0,
+                  "MountForce": 6.1,
+                  "MountTimer": 0,
+                  "PartsRecX": 0,
+                  "PartsRecY": 0,
+                  "PartsRecR": 0,
+                  "NozzleType": "TYP-301",
+                  "PickVacuumValue": 164,
+                  "PreMountVacuumValue": 167,
+                  "MountHeight": 0.2,
+                  "CoplaSetValue": 190,
+                  "CoplaRecValue": 101,
+                  "MountDateTime": "19000101000000000",
+                  "TrayCompXPos": 0,
+                  "TrayCompYPos": 0,
+                  "Bincode": "",
+                  "MntStage": 1
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "PcbExitEvent-Mounter-Traceability-Request": {
+        "summary": "PcbExitEvent for Mounter Machine using TRACEABILITY report API Specification",
+        "value": {
+          "FuncName": "PcbExitEvent",
+          "TraceDate": "20240112145930000",
+          "MchInfo": {
+            "MchName": "Y99999_ogura",
+            "MchSerial": "Y99999",
+            "MchModel": "YRM20-SL-DS-RL",
+            "LaneNo": 1,
+            "LineName": "Line_SL"
+          },
+          "PcbInfo": {
+            "PcbID": "QR0123456789_1",
+            "PgmName": "TEST_ogura",
+            "PrdLot": "TEST_LOT_ogura",
+            "PrdModel": "TEST_ogura",
+            "PcbSide": "A",
+            "FrontOpeID": "YAMAHA",
+            "RearOpeID": "",
+            "LaneNo": 1,
+            "MountComplete": 1,
+            "StartTime": "20240112145920000",
+            "FinishTime": "20240112145930000"
+          },
+          "MchPrdInfo": [
+            {
+              "BlkNo": 2,
+              "BlkID": "QR0123456789_1-001",
+              "MntDetail": [
+                {
+                  "NotMnt": 0,
+                  "MntNo": 1,
+                  "RefName": "test1",
+                  "CmpNo": 1,
+                  "MntTbl": "Table A",
+                  "HeadNo": 1,
+                  "CmpName": "PARTS001",
+                  "CmpCmnt": "Real_Chip",
+                  "FdrTyp": "8mmTape",
+                  "SetNo": 50,
+                  "CmpID": "PARTS001",
+                  "LotID": "ABCDEFG001",
+                  "ReelID": "0000REEL001",
+                  "FdrID": "ZSY-008-000001",
+                  "MountSpeed": 100,
+                  "MountSpeed2": 0,
+                  "MountForce": 6.1,
+                  "MountTimer": 0,
+                  "PartsRecX": 0,
+                  "PartsRecY": 0,
+                  "PartsRecR": 0,
+                  "NozzleType": "TYPE-302",
+                  "PickVacuumValue": 179,
+                  "PreMountVacuumValue": 0,
+                  "MountHeight": -5,
+                  "CoplaSetValue": 50,
+                  "CoplaRecValue": 0,
+                  "MountDateTime": "20240112145920000",
+                  "TrayCompXPos": 0,
+                  "TrayCompYPos": 0,
+                  "Bincode": "",
+                  "NozzleID": "",
+                  "MntStage": 2
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "PcbExitEvent-Aoi-RepairStation-Request": {
+        "summary": "PcbExitEvent AOI/REPAIR-STATION API Specification ",
+        "value": {
+          "FuncName": "PcbExitEvent",
+          "MchInfo": {
+            "MchName": "AOI",
+            "MchSerial": "Y30001",
+            "MchModel": "YRi-V-SL-SS-LR",
+            "LaneNo": "1",
+            "LineName": "Line1"
+          },
+          "TraceDate": "20231006222410000",
+          "PcbInfo": {
+            "PcbID": "1.00E+09",
+            "PgmName": "BENDER_CC613_438_1124_V3_L(2)",
+            "LaneNo": "1",
+            "PgmNo": "393",
+            "PcbSide": "0",
+            "FrontOpeID": "UFER-D",
+            "RearOpeID": "",
+            "NgSteps": "1",
+            "NgCmp": "1",
+            "TotalSteps": "4",
+            "CarryInTime": "4",
+            "InspTime": "43.8",
+            "CarryOutTime": "0",
+            "ResolutionX": "12.28",
+            "ResolutionY": "12.28",
+            "RSOpeName": "",
+            "RSJudgeTime": "",
+            "RSNgCmp": "-1",
+            "PcbSizeX": "325",
+            "PcbSizeY": "250",
+            "CmpCount": "2976",
+            "LibCmpCount": "56",
+            "BlkCount": "6",
+            "ImgPath": "",
+            "FidMark": [
+              {
+                "FidNo": "0",
+                "FidPosX": "4",
+                "FidPosY": "225",
+                "DetectPosX": "4.041",
+                "DetectPosY": "225.369",
+                "DetectRatio": "0"
+              },
+              {
+                "FidNo": "1",
+                "FidPosX": "321",
+                "FidPosY": "42",
+                "DetectPosX": "320.925",
+                "DetectPosY": "42.142",
+                "DetectRatio": "0"
+              }
+            ]
+          },
+          "MchPrdInfo": [
+            {
+              "BlkNo": 6,
+              "InspDetail": [
+                {
+                  "RefNo": 2954,
+                  "RefName": "REF2954",
+                  "ViewNo": 20,
+                  "CmpNo": 1029,
+                  "CmpName": "R408",
+                  "LIBCmpName": "3216M_R_100_1_63",
+                  "PartialType": 1,
+                  "PinNo": 1,
+                  "StepNo": 1135,
+                  "InspTypeNo": 4,
+                  "InspType": "POLARITY",
+                  "AlgorithmNo": 4,
+                  "Algorithm": "POLARITY",
+                  "NGReason": "POLARITY NG",
+                  "LightNo": 4,
+                  "AutoResult": 1,
+                  "OPJudge": 1,
+                  "StepCenterX": 215.624,
+                  "StepCenterY": 70.231,
+                  "StepSizeX": 1.969,
+                  "StepSizeY": 2.321,
+                  "DetectPosX1": 214.694,
+                  "DetectPosY1": 70.793,
+                  "DetectPosX2": 0,
+                  "DetectPosY2": 0,
+                  "OffsetX": -0.93,
+                  "OffsetY": 0.562,
+                  "OffsetR": 0,
+                  "DetectValue": "0.061",
+                  "MeasuredValue": "0.061",
+                  "ImgPath": "\\\\10.82.70.204\\AOI_IMAGE\\AOI\\2023\\10\\06\\22\\220041\\20\\020000"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "DisplayMessageResult-Request": {
+        "summary": "DisplayMessageResult API Specification",
+        "value": {
+          "FuncName": "DisplayMessageResult",
+          "TraceDate": "20250610161655596",
+          "ReciptNumber": "c7114219-1814-486c-87ca-3d4f6ad9a03c",
+          "Result": 1,
+          "ResultMessage": "1: OK"
+        }
+      },
+      "MachineOperationCommandResult-CUR-Request": {
+        "summary": "MachineOperationCommandResult CUR API Specification",
+        "value": {
+          "FuncName": "MachineOperationCommandResult",
+          "TraceDate": "20250610162052767",
+          "ReciptNumber": "65987ce8-adf1-4ec2-a178-55063e37de4f",
+          "Result": 1,
+          "ResultMessage": "1: OK",
+          "EmergencyStopState": "OFF",
+          "InterlockState": "OFF",
+          "OriginState": "INCOMPLETED",
+          "ErrorWaitingState": "YES",
+          "OperationState": "RESET",
+          "PcbSelected": "NO",
+          "DataClassification": "YGZ",
+          "PcbName": "SampleLane1"
+        }
+      },
+      "MachineOperationCommandResult-ORIGIN-Request": {
+        "summary": "MachineOperationCommandResult ORIGIN API Specification",
+        "value": {
+          "FuncName": "MachineOperationCommandResult",
+          "TraceDate": "20250610162139138",
+          "ReciptNumber": "3c1b2d55-1db6-4a91-9a91-1986be95185d",
+          "Result": 1,
+          "ResultMessage": "1: OK"
+        }
+      },
+      "MachineOperationCommandResult-RUN-Request": {
+        "summary": "MachineOperationCommandResult RUN API Specification",
+        "value": {
+          "FuncName": "MachineOperationCommandResult",
+          "TraceDate": "20250610162738373",
+          "ReciptNumber": "1328b71c-e05f-497b-b6b2-968bee7139ef",
+          "Result": 1,
+          "ResultMessage": "1: OK"
+        }
+      },
+      "MachineOperationCommandResult-STOP-Request": {
+        "summary": "MachineOperationCommandResult STOP API Specification",
+        "value": {
+          "FuncName": "MachineOperationCommandResult",
+          "TraceDate": "20250610162819014",
+          "ReciptNumber": "73d7c1ec-0ffb-4fbe-93e7-621129b67d72",
+          "Result": 1,
+          "ResultMessage": "1: OK"
+        }
+      },
+      "MachineOperationCommandResult-RESET-Request": {
+        "summary": "MachineOperationCommandResult RESET API Specification",
+        "value": {
+          "FuncName": "MachineOperationCommandResult",
+          "TraceDate": "20250610162903908",
+          "ReciptNumber": "1eff8202-4e42-4541-bf55-64c00aa396d8",
+          "Result": 1,
+          "ResultMessage": "1: OK"
+        }
+      },
+      "MachineOperationCommandResult-ERRCLEAR-Request": {
+        "summary": "MachineOperationCommandResult ERRCLEAR API Specification",
+        "value": {
+          "FuncName": "MachineOperationCommandResult",
+          "TraceDate": "20250611130732266",
+          "ReciptNumber": "41c90a9f-631d-452a-ad55-fadc408c5f45",
+          "Result": 1,
+          "ResultMessage": "1: OK"
+        }
+      },
+      "MachineOperationCommandResult-SWI-Request": {
+        "summary": "MachineOperationCommandResult SWI API Specification",
+        "value": {
+          "FuncName": "MachineOperationCommandResult",
+          "TraceDate": "20250611141024253",
+          "ReciptNumber": "fa61214f-fab0-4a85-8e61-12b3d554939b",
+          "Result": 1,
+          "ResultMessage": "1: OK"
+        }
+      },
+      "MachineOperationCommandResult-READEX-Request": {
+        "summary": "MachineOperationCommandResult READEX API Specification",
+        "value": {
+          "FuncName": "MachineOperationCommandResult",
+          "TraceDate": "20250611141130198",
+          "ReciptNumber": "2842c20b-d658-48c7-9e2d-ee0b7910dc9a",
+          "Result": 2,
+          "ResultMessage": "8: NOSUCHPCB",
+          "ProgramName": "SampleLane1",
+          "ProgramData": ""
+        }
+      },
+      "MachineOperationCommandResult-WRITEEX-Request": {
+        "summary": "MachineOperationCommandResult WRITEEX API Specification",
+        "value": {
+          "FuncName": "MachineOperationCommandResult",
+          "TraceDate": "20250611174724880",
+          "ReciptNumber": "b19b3bca-b4d7-4fe4-82e1-02bfdd6a42c7",
+          "Result": 1,
+          "ResultMessage": "1: OK"
+        }
+      },
+      "MachineOperationCommandResult-UPDATE_PARTS-Request": {
+        "summary": "MachineOperationCommandResult UPDATE_PARTS_REMAIN API Specification",
+        "value": {
+          "FuncName": "MachineOperationCommandResult",
+          "TraceDate": "20250611173225362",
+          "ReciptNumber": "8a2ad898-af2a-44b4-8318-15a211494181",
+          "Result": 1,
+          "ResultMessage": "1: OK",
+          "ResultUpdatePartsRemain": [
+            {
+              "CmpID": "PARTS001",
+              "UniqueID": "REEL001",
+              "AfterCount": 4321,
+              "Result": 0
+            }
+          ]
+        }
+      },
+      "MachineOperationCommandResult-REGISTER_PARTS-Request": {
+        "summary": "MachineOperationCommandResult REGISTER_PARTS API Specification",
+        "value": {
+          "FuncName": "MachineOperationCommandResult",
+          "TraceDate": "20250618183534950",
+          "ReciptNumber": "ef86231b-870d-40c6-8536-cec2fd13bd12",
+          "Result": 1,
+          "ResultMessage": "1: OK",
+          "ResultRegisterParts": [
+            {
+              "CmpID": "PARTS001",
+              "CmpName": "PARTS001",
+              "FeederType": 0,
+              "Quantity": 5000,
+              "Result": 0
+            }
+          ]
+        }
+      },
+      "MachineOperationCommandResult-REMOTE_SCAN-Request": {
+        "summary": "MachineOperationCommandResult REMOTE_SCAN API Specification",
+        "value": {
+          "FuncName": "MachineOperationCommandResult",
+          "TraceDate": "20250611142015727",
+          "ReciptNumber": "4553f1d9-a924-4ad9-a9a0-efdd05613d2e",
+          "Result": 1,
+          "ResultMessage": "1: OK",
+          "Operation": 0,
+          "RemoteResult": "OK",
+          "Message": "",
+          "Params": [
+            "0",
+            "ZSY-008-123456",
+            "40",
+            "PARTS001",
+            "REEL001",
+            "LotID",
+            "1000",
+            "",
+            "",
+            "",
+            "",
+            ""
+          ]
+        }
+      },
+      "MachineOperationCommandResult-LOCK_PANEL-Request": {
+        "summary": "MachineOperationCommandResult LOCK_PANEL API Specification",
+        "value": {
+          "FuncName": "MachineOperationCommandResult",
+          "TraceDate": "20250611142102807",
+          "ReciptNumber": "7d3a07df-ae32-4183-9547-ebec6cf5916e",
+          "Result": 1,
+          "ResultMessage": "1: OK",
+          "Lock": 0
+        }
+      },
+      "MachineOperationCommandResult-BLOCK_PARTS-Request": {
+        "summary": "MachineOperationCommandResult BLOCK_PARTS API Specification",
+        "value": {
+          "FuncName": "MachineOperationCommandResult",
+          "TraceDate": "20250611162006290",
+          "ReciptNumber": "1265b505-d981-43b6-af01-4b22b84c5643",
+          "Result": 1,
+          "ResultMessage": "1: OK",
+          "FailedMaterialPackages": [
+            "PARTS003"
+          ]
+        }
+      },
+      "MachineOperationCommandResult-UNBLOCK_PARTS-Request": {
+        "summary": "MachineOperationCommandResult UNBLOCK_PARTS API Specification",
+        "value": {
+          "FuncName": "MachineOperationCommandResult",
+          "TraceDate": "20250611162116544",
+          "ReciptNumber": "5b7d0ff4-3f9a-41d4-8673-9e907d1c2e5a",
+          "Result": 1,
+          "ResultMessage": "1: OK",
+          "FailedMaterialPackages": [
+            "PARTS003"
+          ]
+        }
+      },
+      "MachineOperationCommandResult-BLOCK_LOCATIONS-Request": {
+        "summary": "MachineOperationCommandResult BLOCK_LOCATIONS API Specification",
+        "value": {
+          "FuncName": "MachineOperationCommandResult",
+          "TraceDate": "20250611162200170",
+          "ReciptNumber": "3ae568aa-991a-43b4-8569-85f3de6afdff",
+          "Result": 1,
+          "ResultMessage": "1: OK",
+          "FailedMaterialLocations": [
+            {
+              "CarrierID": "Cart001",
+              "SetNo": 45
+            }
+          ]
+        }
+      },
+      "MachineOperationCommandResult-UNBLOCK_LOCATIONS-Request": {
+        "summary": "MachineOperationCommandResult UNBLOCK_LOCATIONS API Specification",
+        "value": {
+          "FuncName": "MachineOperationCommandResult",
+          "TraceDate": "20250611162247103",
+          "ReciptNumber": "3ffd5da8-21aa-4fc7-b226-e3787c3aea22",
+          "Result": 1,
+          "ResultMessage": "1: OK",
+          "FailedMaterialLocations": [
+            {
+              "CarrierID": "Cart001",
+              "SetNo": 45
+            }
+          ]
+        }
+      },
+      "CmpStatusReport-Response": {
+        "summary": "CmpStatusReport Response",
+        "description": "CmpStatusReport API Response",
+        "value": {
+          "FuncName": "CmpStatusReport"
+        }
+      },
+      "DetectedPartsKnotReport-Response": {
+        "summary": "DetectedPartsKnotReport Response",
+        "description": "DetectedPartsKnotReport API Response",
+        "value": {
+          "FuncName": "DetectedPartsKnotReport"
+        }
+      },
+      "MaintenanceReport-Response": {
+        "summary": "MaintenanceReport Response",
+        "description": "MaintenanceReport API Response",
+        "value": {
+          "FuncName": "MaintenanceReport"
+        }
+      },
+      "MaterialRequest-Response": {
+        "summary": "MaterialRequest Response",
+        "description": "MaterialRequest API Response",
+        "value": {
+          "FuncName": "MaterialRequest",
+          "TraceDate": "20250709115731934",
+          "MchInfo": {
+            "MchName": "YM300",
+            "MchSerial": "YM300",
+            "MchModel": "YCP10-SL-SS-LR"
+          },
+          "Err": 1,
+          "ErrMsg": "This is Dummy Error Message for Automation Testing",
+          "Component": {
+            "ReelID": "1234",
+            "OrderID": "0",
+            "CmpID": "AIJF1247-3",
+            "LotID": "LOT1234",
+            "Qty": 1000,
+            "Rank": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E"
+            ]
+          }
+        }
+      },
+      "MchStatusChange-Response": {
+        "summary": "MchStatusChange Response",
+        "description": "MchStatusChange API Response",
+        "value": {
+          "FuncName": "MchStatusChange"
+        }
+      },
+      "PcbEntryEvent-Response": {
+        "summary": "PcbEntryEvent Response",
+        "description": "PcbEntryEvent API Response",
+        "value": {
+          "FuncName": "PcbEntryEvent",
+          "TraceDate": "20250709115119063",
+          "MchInfo": {
+            "MchName": "YM300",
+            "MchSerial": "YM300",
+            "MchModel": "YCP10-SL-SS-LR",
+            "LaneNo": 1
+          },
+          "Err": 0,
+          "ErrMsg": "",
+          "PcbInfo": {
+            "PcbID": "1234",
+            "PgmName": ""
+          },
+          "Blk": [
+            {
+              "BlkNo": "2110600001",
+              "Mount": 1
+            },
+            {
+              "BlkNo": "2110600002",
+              "Mount": 0
+            }
+          ]
+        }
+      },
+      "PcbExitEvent-Response": {
+        "summary": "PcbExitEvent Response",
+        "description": "PcbExitEvent API Response",
+        "value": {
+          "FuncName": "PcbExitEvent",
+          "TraceDate": "20250709115429678",
+          "MchInfo": {
+            "MchName": "YM300",
+            "MchSerial": "YM300",
+            "MchModel": "YC8-SL-SS-LR"
+          },
+          "Err": 0,
+          "PcbInfo": {
+            "PcbID": "B30046701017367114329",
+            "PgmName": "PEPPER_MICRO_467_QCA"
+          },
+          "ErrMsg": ""
+        }
+      },
+      "PgmSwitched-Response": {
+        "summary": "PgmSwitched Response",
+        "description": "PgmSwitched API Response",
+        "value": {
+          "FuncName": "PgmSwitched"
+        }
+      },
+      "SetupRequest-Response": {
+        "summary": "SetupRequest Response",
+        "description": "SetupRequest API Response",
+        "value": {
+          "FuncName": "SetupRequest",
+          "TraceDate": "20250610152514960",
+          "MchInfo": {
+            "MchName": "YM300",
+            "MchSerial": "YM300",
+            "MchModel": "YCP10-SL-SS-LR",
+            "LaneNo": 1,
+            "LineName": "Line1"
+          },
+          "Message": "Setup Info Response Message",
+          "SetInfos": [
+            {
+              "Operation": 1,
+              "CarrierInfos": [
+                {
+                  "SetNo": 25,
+                  "Type": 0,
+                  "Result": 0
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "SetupRemoved-Response": {
+        "summary": "SetupRemoved Response",
+        "description": "SetupRemoved API Response",
+        "value": {
+          "FuncName": "SetupRemoved"
+        }
+      },
+      "SensorPartsRemainCorrection-Response": {
+        "summary": "SensorPartsRemainCorrection Response",
+        "description": "SensorPartsRemainCorrection API Response",
+        "value": {
+          "FuncName": "SensorPartsRemainCorrection"
+        }
+      },
+      "DisplayMessageResult-Response": {
+        "summary": "DisplayMessage Response",
+        "description": "DisplayMessage API Response",
+        "value": {
+          "FuncName": "DisplayMessageResult"
+        }
+      },
+      "MachineOperationCommandResult-Response": {
+        "summary": "MachineOperationCommandResult Response",
+        "description": "MachineOperationCommandResult API Response",
+        "value": {
+          "FuncName": "MachineOperationCommandResult"
+        }
+      }
+    }
+  }
+}

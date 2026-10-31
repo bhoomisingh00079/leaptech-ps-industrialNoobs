@@ -1,6 +1,9 @@
 """Tests for manual file upload, processing pipeline integration, format choices, and output download."""
 import io
 import json
+import base64
+import hashlib
+import http.cookiejar
 import os
 import tempfile
 import unittest
@@ -10,7 +13,7 @@ from unittest import mock
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
-from linebridge import core, webui
+from linebridge import core, webui, ysup
 
 ROOT = Path(__file__).resolve().parents[1]
 SAMPLE_CSV = ROOT / "samples" / "pnp_L1M8_board_00001.csv"
@@ -39,13 +42,21 @@ class UploadWorkflowTests(unittest.TestCase):
             "manual_inputs": [{"label": "Operator", "value": "OP-99"}],
         })
         self.ctl = webui.Controller(str(self.ws / "config.json"))
+        salt = b"linebridge-test-salt"
         self.ctl.cfg = self.cfg
+        self.ctl.cfg["admin_password_salt"] = base64.b64encode(salt).decode("ascii")
+        self.ctl.cfg["admin_password_hash"] = hashlib.pbkdf2_hmac("sha256", b"test-admin-password", salt, 310000).hex()
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), webui.make_handler(self.ctl))
         self.port = self.server.server_address[1]
         self.url = f"http://127.0.0.1:{self.port}"
         import threading
         self.server_thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.server_thread.start()
+        self.opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+        login = urllib.request.Request(f"{self.url}/api/login", data=json.dumps({
+            "username": "Admin", "password": "test-admin-password"
+        }).encode(), headers={"Content-Type": "application/json"})
+        self.opener.open(login).read()
 
     def tearDown(self):
         self.server.shutdown()
@@ -56,7 +67,7 @@ class UploadWorkflowTests(unittest.TestCase):
         data = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(f"{self.url}{path}", data=data, method="POST",
                                      headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req) as resp:
+        with self.opener.open(req) as resp:
             return json.loads(resp.read().decode("utf-8"))
 
     def _post_multipart(self, path, filename, content_bytes, overrides=None):
@@ -73,12 +84,12 @@ class UploadWorkflowTests(unittest.TestCase):
             method="POST",
             headers={"Content-Type": f"multipart/form-data; boundary={boundary}"}
         )
-        with urllib.request.urlopen(req) as resp:
+        with self.opener.open(req) as resp:
             return json.loads(resp.read().decode("utf-8"))
 
     def _get(self, path):
         req = urllib.request.Request(f"{self.url}{path}")
-        with urllib.request.urlopen(req) as resp:
+        with self.opener.open(req) as resp:
             return resp.status, resp.headers, resp.read()
 
     def test_upload_csv_to_json_and_download(self):
@@ -231,7 +242,7 @@ class UploadWorkflowTests(unittest.TestCase):
             headers={"Content-Type": "application/json"}
         )
         with self.assertRaises(urllib.error.HTTPError) as ctx:
-            urllib.request.urlopen(req)
+            self.opener.open(req)
         self.assertEqual(ctx.exception.code, 400)
         err_body = json.loads(ctx.exception.read().decode("utf-8"))
         self.assertIn("Unsupported JSON structure", err_body["error"])
@@ -243,7 +254,7 @@ class UploadWorkflowTests(unittest.TestCase):
             headers={"Content-Type": "application/json"}
         )
         with self.assertRaises(urllib.error.HTTPError) as ctx:
-            urllib.request.urlopen(req)
+            self.opener.open(req)
         self.assertEqual(ctx.exception.code, 400)
         err_body = json.loads(ctx.exception.read().decode("utf-8"))
         self.assertIn("Unsupported file format", err_body["error"])
@@ -253,14 +264,118 @@ class UploadWorkflowTests(unittest.TestCase):
         for bad_name in ("../secret.txt", "/etc/passwd", "..\\boot.ini", ".hidden"):
             req = urllib.request.Request(f"{self.url}/api/download?name={bad_name}")
             with self.assertRaises(urllib.error.HTTPError) as ctx:
-                urllib.request.urlopen(req)
+                self.opener.open(req)
             self.assertEqual(ctx.exception.code, 400)
 
         # Non-existent file in output folder returns 404
         req404 = urllib.request.Request(f"{self.url}/api/download?name=nonexistent.json")
         with self.assertRaises(urllib.error.HTTPError) as ctx:
-            urllib.request.urlopen(req404)
+            self.opener.open(req404)
         self.assertEqual(ctx.exception.code, 404)
+
+
+    def test_ysup_setup_verification_and_admin_auth(self):
+        self.cfg.update(ysup_api_token="", ysup_basic_username="ysup-test",
+                        ysup_basic_password="ysup-password", ysup_database=str(self.ws / "materials.csv"),
+                        ysup_fields={"part_number": True, "reel_id": True, "lot_id": False})
+        self.ctl.cfg = self.cfg
+        csv_text = "Part Number,Reel ID,Lot ID\nPN-100,REEL-9,LOT-7\n"
+        imported = self._post_json("/api/ysup/database", {"csv": csv_text})
+        self.assertEqual(imported["records"], 1)
+        payload = {
+            "FuncName": "SetupRequest", "TraceDate": "20260601123000123",
+            "MchInfo": {"MchName": "MOUNTER", "MchSerial": "Y30001", "MchModel": "YSM", "LaneNo": 1, "LineName": "L1"},
+            "SetInfos": [{"Operation": 5, "LocationID": "FEEDER-1", "CarrierInfos": [
+                {"Name": "8mmTape", "SetNo": 1, "Type": 0, "UniqueID": "CARRIER-1",
+                 "CmpInfos": [{"CmpID": "PN-100", "Qty": 5000, "UniqueID": "REEL-9"}]}
+            ]}]
+        }
+        req = urllib.request.Request(f"{self.url}/ysup/api", data=json.dumps(payload).encode(),
+                                     headers={"Content-Type": "application/json", "client-name": "Relay1", "Authorization": "Basic " +
+                                              base64.b64encode(b"ysup-test:ysup-password").decode()})
+        with urllib.request.urlopen(req) as response:
+            result = json.loads(response.read())
+        self.assertEqual(result["FuncName"], "SetupRequest")
+        self.assertEqual(result["SetInfos"][0]["CarrierInfos"][0]["Result"], 0)
+        bad = json.loads(json.dumps(payload))
+        bad["SetInfos"][0]["CarrierInfos"][0]["CmpInfos"][0]["CmpID"] = "WRONG"
+        req = urllib.request.Request(f"{self.url}/ysup/api", data=json.dumps(bad).encode(),
+                                     headers={"Content-Type": "application/json", "client-name": "Relay1", "Authorization": "Basic " +
+                                              base64.b64encode(b"ysup-test:ysup-password").decode()})
+        with urllib.request.urlopen(req) as response:
+            rejected = json.loads(response.read())
+        self.assertEqual(rejected["SetInfos"][0]["CarrierInfos"][0]["Result"], 1)
+        material = {
+            "FuncName": "MaterialRequest", "TraceDate": "20260601123000124",
+            "MchInfo": payload["MchInfo"],
+            "Component": {"ReelID": "REEL-9", "OrderID": "0", "Assy": "", "LotID": "LOT-7",
+                          "SurfaceInfo": "", "BoardName": ""}
+        }
+        req = urllib.request.Request(f"{self.url}/ysup/api", data=json.dumps(material).encode(),
+                                     headers={"Content-Type": "application/json", "client-name": "Relay1",
+                                              "Authorization": "Basic " +
+                                              base64.b64encode(b"ysup-test:ysup-password").decode()})
+        with urllib.request.urlopen(req) as response:
+            material_result = json.loads(response.read())
+        self.assertEqual(material_result["Err"], 0)
+        self.assertEqual(material_result["Component"]["CmpID"], "PN-100")
+        materials, _ = ysup.parse_database_csv(csv_text)
+        callback = ysup.remote_scan_component_payload(
+            "Y30001", True, 1, {"CmpID": "PN-100", "UniqueID": "REEL-9", "Qty": 5000}, materials
+        )
+        self.assertEqual(callback["CommandInfo"]["TargetOperation"], "REMOTE_SCAN")
+        params = callback["CommandInfo"]["Params"]["Params"]
+        self.assertEqual(params[:7], ["0", "PN-100$REEL-9$5000", "1", "PN-100", "REEL-9", "LOT-7", "5000"])
+        self.assertEqual(len(params), 12)
+        unauth = urllib.request.Request(f"{self.url}/api/config")
+        with self.assertRaises(urllib.error.HTTPError) as denied:
+            urllib.request.urlopen(unauth)
+        self.assertEqual(denied.exception.code, 401)
+
+    def test_ysup_remote_scan_uses_vendor_api_contract(self):
+        self.cfg.update(ysup_database=str(self.ws / "materials.csv"), ysup_basic_username="in",
+                        ysup_basic_password="in-pass", ysup_outbound_enabled=True,
+                        ysup_outbound_url="http://ysup.test/api", ysup_client_name="LEAPTECH-MES",
+                        ysup_outbound_username="out", ysup_outbound_password="out-pass")
+        self.ctl.cfg = self.cfg
+        self._post_json("/api/ysup/database", {
+            "csv": "Part Number,Reel ID,Lot ID,Quantity\nPN-1,R-1,L-1,2000\n"
+        })
+        payload = {
+            "FuncName": "SetupRequest", "TraceDate": "20260601123000125",
+            "MchInfo": {"MchName": "MOUNTER", "MchSerial": "Y30001", "MchModel": "YSM", "LaneNo": 1, "LineName": "L1"},
+            "SetInfos": [{"Operation": 5, "LocationID": "FEEDER-1", "CarrierInfos": [
+                {"Name": "8mmTape", "SetNo": 3, "Type": 0, "UniqueID": "CARRIER-1",
+                 "CmpInfos": [{"CmpID": "PN-1", "Qty": 2000, "UniqueID": "R-1"}]}
+            ]}]
+        }
+        class UpstreamResponse:
+            def __enter__(self): return self
+            def __exit__(self, *args): return False
+            def read(self): return b'{"Result":1,"ResultMessage":"1001: Request Validation Success"}'
+        captured = []
+        def accept(request, timeout=None):
+            captured.append(request)
+            return UpstreamResponse()
+        req = urllib.request.Request(
+            f"{self.url}/ysup/api", data=json.dumps(payload).encode(),
+            headers={"Content-Type": "application/json", "client-name": "Relay1",
+                     "Authorization": "Basic " + base64.b64encode(b"in:in-pass").decode()}
+        )
+        with mock.patch("urllib.request.urlopen", side_effect=accept):
+            with self.opener.open(req) as response:
+                returned = json.loads(response.read())
+        self.assertEqual(returned["SetInfos"][0]["CarrierInfos"][0]["Result"], 0)
+        self.assertEqual(len(captured), 1)
+        request = captured[0]
+        sent_headers = {k.lower(): v for k, v in request.header_items()}
+        self.assertEqual(sent_headers["client-name"], "LEAPTECH-MES")
+        self.assertEqual(request.get_header("Authorization"), "Basic " + base64.b64encode(b"out:out-pass").decode())
+        outbound = json.loads(request.data)
+        self.assertEqual(outbound["CommandInfo"]["TargetOperation"], "REMOTE_SCAN")
+        self.assertEqual(outbound["CommandInfo"]["TargetMachine"], "Y30001")
+        self.assertEqual(outbound["CommandInfo"]["Params"]["Params"][:7],
+                         ["0", "PN-1$R-1$2000", "3", "PN-1", "R-1", "L-1", "2000"])
 
 
 if __name__ == "__main__":
