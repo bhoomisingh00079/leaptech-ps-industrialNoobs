@@ -14,6 +14,7 @@ class SettingsHistoryMixin:
                        ("what", N_("What changed"), 620))
     HOW_TEXT = {"save": N_("Saved"), "import": N_("Imported"), "restore": N_("Restored"), "password": N_("Password"),
                 "operator": N_("Typed values"), "access": N_("Admin access"),
+                "materials": N_("Materials import"),  # M2-materials
                 "outside": N_("Outside CNCBridge"), "baseline": N_("Starting point")}
     HISTORY_LIMIT = 2000
 

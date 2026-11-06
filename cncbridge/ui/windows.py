@@ -72,7 +72,7 @@ class WindowsMixin:
         panes.pack(fill="both", expand=True, padx=14, pady=14)
         topics = self.help_topics = ttk.Treeview(panes, show="tree", selectmode="browse")
         topics.column("#0", width=self.px(300))
-        for key, title, _ in help_text.TOPICS:
+        for key, title, _ in self.help_topic_data:
             topics.insert("", "end", iid=key, text=tr(title))
         topics.bind("<<TreeviewSelect>>", self._help_selected)
         panes.add(topics, weight=1)
@@ -99,7 +99,7 @@ class WindowsMixin:
             self._render_help(selection[0])
 
     def _render_help(self, key):
-        title, body = next((t, b) for k, t, b in help_text.TOPICS if k == key)
+        title, body = next((t, b) for k, t, b in self.help_topic_data if k == key)
         title, body = tr(title), tr(body)
         if key == "keys":
             body = (tr("The shortcut is shown beside each menu entry. A shortcut does nothing while its entry is "

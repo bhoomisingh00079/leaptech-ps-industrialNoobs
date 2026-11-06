@@ -77,6 +77,7 @@ class FormMixin:
         self.rename_text.insert("1.0", cfg["rename_columns"])
         self._set_text(self.accounts_text, cfg["password_accounts"])
         self._update_theme_note()
+        self._each_extension("fill", cfg)
 
     @staticmethod
     def _set_text(widget, text):
@@ -106,6 +107,7 @@ class FormMixin:
                 pass  # left as typed; validate() names the slot
             cfg["selections"].append({"name": name.get(), "range": text, "header": header.get()})
         cfg["manual_inputs"] = [{"name": n.get(), "value": val.get()} for n, val in self.man_vars]
+        self._each_extension("collect", cfg)
         return normalize_config(cfg)
 
     def test_alert(self):

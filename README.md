@@ -47,6 +47,26 @@ installed on the machine PC and it needs no internet connection.
    and keeps a copy of the output file beside it in `back-up\YYYY-MM-DD\outputs\` for **View output**.
    Both go when the back-up clean-up deletes that day.
 
+<!-- M2-materials -->
+## Materials database
+
+The **Tools > Materials...** window shows the imported customer CSV as a searchable, read-only list. An Admin can
+choose **Import database...** to review the column mapping, rows kept/refused and quantity warnings before
+replacing the current database. **Save template CSV...** creates a blank file with the standard columns:
+`Part Number, Description, Reel ID, LOT ID, Quantity`. Extra customer columns are retained. A reel ID appearing
+more than once causes all rows with that reel ID to be refused; rows without a part number are also refused.
+Unreadable quantities are shown as warnings and their otherwise-valid rows are kept.
+
+The CSV is stored at `ysup_database` (by default `ysup_materials.csv` in the CNCBridge data folder), so it can
+be shared with YSUP-Link. **Settings > Options > Materials** controls which Part Number, Reel ID and Lot ID
+fields are enabled for YSUP lookups, optional extra customer fields, and an optional automatic import folder.
+While monitoring is stopped the open CNCBridge window checks that folder periodically; while monitoring runs,
+the engine checks it each cycle. A valid CSV replaces the database and moves to `imported\`. An invalid CSV is
+moved to `rejected\`, raises an alert, and leaves the existing database in place. Import details and refused
+rows are stored beside the CSV in `ysup_materials.refused.json`; that sidecar is ignored if the database content
+is later replaced outside CNCBridge.
+<!-- /M2-materials -->
+
 ## Install
 
 **With the set-up program.** Run `CNCBridgeSetup.exe` as an administrator (Windows asks). It installs

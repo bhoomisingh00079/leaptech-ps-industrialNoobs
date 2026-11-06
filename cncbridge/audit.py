@@ -210,6 +210,17 @@ def activity(data_dir, action, detail=""):
     return entry
 
 
+def note(data_dir, how, detail=""):
+    """Record a non-settings action in the change ledger without implying a settings edit."""
+    entry = _entry(how, detail, [], file_sha(Path(data_dir) / "config.json"))
+    try:
+        _append(data_dir, entry)
+    except OSError as error:
+        log.warning("Could not record %s in the settings history: %s", how, error)
+        return None
+    return entry
+
+
 def _last_saved(data_dir):
     """The settings as the last save left them: the newest copy in backups."""
     from .config import load_config

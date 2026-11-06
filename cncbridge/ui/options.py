@@ -40,6 +40,7 @@ class OptionsMixin:
             notebook.add(page, text=f"  {title}  ")
             self.option_pages[key] = page
             build(page.body)
+        self._each_extension("option_pages")
         bar = ttk.Frame(win, padding=(14, 10))
         bar.pack(fill="x")
         ttk.Label(bar, textvariable=self.status_msg, style="Small.TLabel", wraplength=self.px(430),

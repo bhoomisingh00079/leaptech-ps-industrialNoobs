@@ -6,6 +6,7 @@ import hmac
 import json
 import logging
 import os
+import re  # M2-materials
 import shutil
 import sys
 from datetime import datetime
@@ -15,7 +16,7 @@ from .csvread import split_patterns
 
 APP_NAME = "CNCBridge"
 VERSION = "1.2.0"
-SETTINGS_VERSION = 5  # the layout of config.json; MIGRATIONS bring an older file up to it
+SETTINGS_VERSION = 6  # the layout of config.json; MIGRATIONS bring an older file up to it
 OPERATOR_FILE = "operator.json"   # the typed values: what an operator may change without the setup rights
 SECRETS_FILE = "secrets.json"     # the encrypted passwords and tokens, apart so that they can be locked away
 
@@ -74,6 +75,10 @@ DEFAULT_CONFIG = {
     "rename_columns": "",                 # one "Old=New" per line, applied to the column names of every block
     "setup_password": "",                 # salted Admin password hash; retained as a key for compatibility
     "admin_idle_minutes": 0,                # log Admin out after this many idle minutes; 0 = off
+    "ysup_database": "ysup_materials.csv",  # M2-materials: imported CSV, relative to the data folder by default
+    "ysup_fields": {"part_number": True, "reel_id": True, "lot_id": False},  # M2-materials
+    "ysup_extra_fields": [],                # M2-materials: customer fields also checked by later YSUP lookups
+    "ysup_import_folder": "",              # M2-materials: optional folder fed by a customer database export
     "shift_times": "",                    # e.g. "06:00, 14:00, 22:00": ask the operator to confirm the typed values
     "keep_backup_days": 0,                # delete back-up files older than this; 0 = keep them all
     "keep_history_days": 0,               # delete history rows older than this; 0 = keep them all
@@ -168,6 +173,18 @@ def normalize_config(cfg):
     base["alert_after_minutes"] = _number(base["alert_after_minutes"], 10, 0)
     base["heartbeat_minutes"] = _number(base["heartbeat_minutes"], 5, 1)
     base["admin_idle_minutes"] = int(_number(base["admin_idle_minutes"], 0, 0))
+    base["ysup_database"] = str(base["ysup_database"] or "ysup_materials.csv").strip() or "ysup_materials.csv"  # M2-materials
+    base["ysup_import_folder"] = str(base["ysup_import_folder"] or "").strip()  # M2-materials
+    ysup_fields = base.get("ysup_fields") if isinstance(base.get("ysup_fields"), dict) else {}  # M2-materials
+    base["ysup_fields"] = {key: bool(ysup_fields.get(key, value)) for key, value in {  # M2-materials
+        "part_number": True, "reel_id": True, "lot_id": False}.items()}
+    ysup_extra = base.get("ysup_extra_fields")  # M2-materials
+    if isinstance(ysup_extra, str):  # M2-materials
+        ysup_extra = re.split(r"[,\n]", ysup_extra)  # M2-materials
+    if not isinstance(ysup_extra, (list, tuple)):  # M2-materials
+        ysup_extra = []  # M2-materials
+    base["ysup_extra_fields"] = list(dict.fromkeys(str(name).strip() for name in ysup_extra  # M2-materials
+                                                   if name is not None and str(name).strip()))  # M2-materials
     base["alert_email_port"] = int(_number(base["alert_email_port"], 587, 1))
     base["ftp_port"] = int(_number(base["ftp_port"], 21, 1))
     if base["ftp_port"] > 65535:
@@ -206,7 +223,16 @@ def _v4_to_v5(raw):
     return raw
 
 
+def _v5_to_v6(raw):  # M2-materials
+    raw.setdefault("ysup_database", "ysup_materials.csv")  # M2-materials
+    raw.setdefault("ysup_fields", {"part_number": True, "reel_id": True, "lot_id": False})  # M2-materials
+    raw.setdefault("ysup_extra_fields", [])  # M2-materials
+    raw.setdefault("ysup_import_folder", "")  # M2-materials
+    return raw  # M2-materials
+
+
 MIGRATIONS = {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5}
+MIGRATIONS[5] = _v5_to_v6  # M2-materials
 
 
 def file_version(raw):

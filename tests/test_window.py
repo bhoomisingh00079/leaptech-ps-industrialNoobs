@@ -1230,7 +1230,8 @@ class MenuBar(WindowTest):
 
         def steps():
             pages = {key: str(page) for key, page in w.option_pages.items()}
-            self.assertEqual(list(pages), ["processing", "output", "alerts", "heartbeat", "access", "appearance"])
+            self.assertEqual(list(pages), ["processing", "output", "alerts", "heartbeat", "access", "appearance",
+                                           "materials"])  # M2-materials
             for key in ("autostart", "skip_duplicates", "poll_seconds", "encoding", "delimiter", "complete_marker",
                         "run_in_background", "keep_backup_days", "json_numbers", "csv_flat", "time_zone",
                         "rename_columns", "alert_notify", "alert_email_to", "test_alert", "heartbeat_url", "test_heartbeat",
@@ -1334,7 +1335,7 @@ class LogAndHelp(WindowTest):
 
         def steps():
             self.assertEqual(w.help_win.state(), "withdrawn")
-            for key, title, _ in app.help_text.TOPICS:
+            for key, title, _ in w.help_topic_data:  # M2-materials
                 w.open_help(key)
                 w.update()
                 shown = w.help_body.get("1.0", "end")

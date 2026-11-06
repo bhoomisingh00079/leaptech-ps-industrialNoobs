@@ -2,7 +2,6 @@
 import tkinter as tk
 from tkinter import ttk
 
-from .. import help as help_text
 from .dropdown import DropDown
 from ..i18n import tr
 
@@ -104,7 +103,7 @@ class MenusMixin:
 
         help_menu = menu("Help")
         item(help_menu, "help", tr("Getting started"), lambda: self.open_help("start"), "F1")
-        for key, title, _ in help_text.TOPICS[1:]:
+        for key, title, _ in self.help_topic_data[1:]:
             item(help_menu, f"help_{key}", tr(title), lambda key=key: self.open_help(key))
         help_menu.add_separator()
         item(help_menu, "diagnostics", tr("Export diagnostics..."), self.export_diagnostics)

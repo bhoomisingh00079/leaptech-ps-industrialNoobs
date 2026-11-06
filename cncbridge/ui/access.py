@@ -130,6 +130,7 @@ class AccessMixin:
         self.tabs.select(self._home_tab(locked))
         self._sync_sidebar()
         self._schedule_checklist()
+        self._each_extension("lock_changed", locked)
 
     def _home_tab(self, locked):
         """The page shown when the window opens, and after the lock changes."""

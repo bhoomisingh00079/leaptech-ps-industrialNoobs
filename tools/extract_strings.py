@@ -47,12 +47,28 @@ def from_help(tree):
                     yield node.lineno, what
 
 
+def from_extension_help(tree):
+    """Help modules may expose one generic HELP_TOPIC tuple for their optional UI extension."""
+    for node in tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(isinstance(target, ast.Name) and target.id == "HELP_TOPIC" for target in node.targets):
+            continue
+        try:
+            _key, title, body = ast.literal_eval(node.value)
+        except (ValueError, TypeError):
+            continue
+        yield node.lineno, title
+        if body:
+            yield node.lineno, body
+
+
 def extract(package=PACKAGE):
     """{english text: ""} in a stable order (by file, then position)."""
     found = {}
     for path in sorted(Path(package).rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"))
-        items = list(from_calls(tree))
+        items = list(from_calls(tree)) + list(from_extension_help(tree))
         if path.name == "help.py" and path.parent == Path(package):
             items += list(from_help(tree))
         for _line, text in sorted(items, key=lambda i: i[0]):

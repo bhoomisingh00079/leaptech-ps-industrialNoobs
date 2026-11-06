@@ -40,12 +40,13 @@ class SettingsVersion(unittest.TestCase):
         cfg = config.load_config(self.path)
         self.assertEqual(cfg["setup_password"], stored)
         self.assertEqual(cfg["admin_idle_minutes"], 0)
-        self.assertEqual(cfg["config_version"], 5)
+        self.assertEqual(cfg["config_version"], config.SETTINGS_VERSION)
 
     def test_v4_migration_adds_an_empty_password_when_none_was_set(self):
         self.write(config_version=4, station_name="Line 4")
         cfg = config.load_config(self.path)
-        self.assertEqual((cfg["setup_password"], cfg["admin_idle_minutes"], cfg["config_version"]), ("", 0, 5))
+        self.assertEqual((cfg["setup_password"], cfg["admin_idle_minutes"], cfg["config_version"]),
+                         ("", 0, config.SETTINGS_VERSION))
 
     def test_file_patterns_are_tidied(self):
         cfg = config.normalize_config({"file_pattern": " *.csv ;*.json;", "priority_patterns": "urgent_*\nrework_*"})

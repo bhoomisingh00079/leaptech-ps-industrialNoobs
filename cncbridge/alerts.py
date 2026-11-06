@@ -155,13 +155,14 @@ def read_state(data_dir):
 
 
 class Alerts:
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, clear=True):
         self.state_file = Path(data_dir) / STATE_FILE
-        self.open = {}           # subject -> {"text", "since"}: announced and not yet resolved
+        self.open = read_state(data_dir) if not clear else {}  # subject -> {"text", "since"}
         self._lock = threading.Lock()
         self._queue = queue.Queue()
         self._worker = None
-        self._save()             # a previous run may have left problems that are no longer watched
+        if clear:
+            self._save()         # a previous run may have left problems that are no longer watched
 
     def problem(self, subject, text, cfg):
         with self._lock:

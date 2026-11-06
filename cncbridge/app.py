@@ -49,6 +49,9 @@ from .ui.output_window import OutputWindowMixin
 from .ui.pageheader import PageHeaderMixin
 from .ui.sidebar import SidebarMixin
 from .ui.status import StatusMixin
+from .ui.materials_window import MaterialsExtension  # M2-materials
+
+EXTENSIONS = (MaterialsExtension,)  # M2-materials
 
 
 class App(LayoutMixin,
@@ -71,6 +74,11 @@ class App(LayoutMixin,
           PageHeaderMixin,
           OutputWindowMixin,
           tk.Tk):
+    def _each_extension(self, hook, *args):
+        """Call a named optional feature hook; the application core knows no feature-specific behavior."""
+        return [method(*args) for extension in getattr(self, "extensions", ())
+                if (method := getattr(extension, hook, None)) is not None]
+
     def __init__(self, data_dir, notice=None, lock=None, connected=False, resume=False):
         """
         resume: start monitoring at once (the window was restarted while monitoring).
@@ -136,7 +144,11 @@ class App(LayoutMixin,
                  self.cfg["ui_scale"], self.language)
 
         self._make_vars()
+        self.extensions = [extension(self) for extension in EXTENSIONS]  # M2-materials
+        self.help_topic_data = help_text.TOPICS + tuple(
+            topic for result in self._each_extension("help_topics") if result for topic in result)
         self._build_menubar()
+        self._each_extension("add_menus")
         self._build_body()
         self._build_toolbar()
         self._build_header()
@@ -159,6 +171,7 @@ class App(LayoutMixin,
             restyle_cards(self)  # the plain widgets inside a box take the card's colour
         self._bind_shortcuts()
         self._apply_lock()
+        self._each_extension("start")
         for sequence in ("<KeyPress>", "<ButtonPress>", "<MouseWheel>"):
             self.bind_all(sequence, self._mark_admin_activity, add="+")
         if not self.protected:

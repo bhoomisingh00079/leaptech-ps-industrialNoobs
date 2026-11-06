@@ -47,6 +47,7 @@ from . import audit, eventlog, heartbeat
 from .alerts import Alerts
 from .background import stop_requested
 from .config import APP_NAME, OPERATOR_FILE, VERSION, load_config, normalize_config
+from .ysup import materials as ysup_materials  # M2-materials
 # Everything that used to live in this file is still reachable as engine.<name>.
 from .csvread import (  # noqa: F401
     check_range, col_index, col_letter, decode, DELIMITERS, extract, extract_all, FileError, find_heading,
@@ -344,6 +345,7 @@ class Engine:
 
     def scan_once(self):
         """One cycle: process every finished file in the machine folder, then deliver what is queued."""
+        ysup_materials.import_pending(self.cfg, self.data, self.alerts)  # M2-materials
         problems = validate(self.cfg)
         if problems:
             self._report("settings", "Settings are not complete: " + " ".join(problems), logging.ERROR)
