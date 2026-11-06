@@ -160,11 +160,14 @@ file after Save settings; monitoring does not have to be stopped.
 Enter shift start times such as 06:00, 14:00, 22:00. At each, the operator is asked to confirm or change the typed \
 values. Processing never pauses for it; a banner stays until it is confirmed.
 
-## Setup password (Settings > Operators & access)
-With a password set, Lock setup (Settings menu) hides Setup, Delivery, Pick ranges & preview and the Options \
-window. Operators then see only Start/Stop, the counters, History and the typed values. Unlock setup asks for the \
-password. The password is stored as a hash and cannot be recovered; if it is lost, remove "setup_password" from \
-config.json in the data folder.
+## Admin account (Settings > Operators & access)
+On first start, create the single Admin password (at least 12 characters) to unlock setup. Sign in through Settings > \
+Unlock setup or File > Log out. The username is Admin, case-insensitive. Locked, operators can still start and stop \
+processing, see the counters and History, and apply typed values. Change Admin password verifies the current \
+password and ends the current session. Admin sessions end after 8 hours; an optional idle limit can shorten that \
+time. Failed sign-ins are delayed increasingly, up to 30 seconds. Existing short setup passwords are accepted \
+once and must be changed before setup unlocks. The salted password hash is retained across settings migration and \
+is never written in plain text.
 
 ## Protecting the settings (Settings > Operators & access)
 By default every Windows user of this PC can edit the settings file and read the saved passwords. "Only administrators can change the settings or read the saved passwords" locks them: operators can still start and stop, and change the typed values, but anything else needs administrator rights, and the window offers File > Restart as administrator. Switching it on or off needs an administrator session. If an operator account itself runs the processing, list it in the box so that it can read the saved passwords.

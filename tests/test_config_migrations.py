@@ -31,7 +31,21 @@ class SettingsVersion(unittest.TestCase):
     def test_a_version_3_file_loads_with_nothing_to_process_first(self):
         self.write(config_version=3, station_name="Line 3", file_pattern="*.csv")
         cfg = config.load_config(self.path)
-        self.assertEqual((cfg["priority_patterns"], cfg["file_pattern"], cfg["config_version"]), ("", "*.csv", 4))
+        self.assertEqual((cfg["priority_patterns"], cfg["file_pattern"], cfg["config_version"]),
+                         ("", "*.csv", config.SETTINGS_VERSION))
+
+    def test_v4_migration_preserves_the_existing_admin_password_hash(self):
+        stored = config.hash_password("old setup password")
+        self.write(config_version=4, station_name="Line 4", setup_password=stored)
+        cfg = config.load_config(self.path)
+        self.assertEqual(cfg["setup_password"], stored)
+        self.assertEqual(cfg["admin_idle_minutes"], 0)
+        self.assertEqual(cfg["config_version"], 5)
+
+    def test_v4_migration_adds_an_empty_password_when_none_was_set(self):
+        self.write(config_version=4, station_name="Line 4")
+        cfg = config.load_config(self.path)
+        self.assertEqual((cfg["setup_password"], cfg["admin_idle_minutes"], cfg["config_version"]), ("", 0, 5))
 
     def test_file_patterns_are_tidied(self):
         cfg = config.normalize_config({"file_pattern": " *.csv ;*.json;", "priority_patterns": "urgent_*\nrework_*"})
@@ -85,6 +99,13 @@ class SettingsVersion(unittest.TestCase):
     def test_a_broken_version_counts_as_an_old_file(self):
         for junk in ("two", None, -3, [1]):
             self.assertEqual(config.file_version({"config_version": junk}), 1)
+
+    def test_password_policy_and_legacy_hash_verification(self):
+        self.assertEqual(config.MIN_PASSWORD, 12)
+        modern = "machine-admin-password"
+        legacy = "old1"
+        self.assertTrue(config.check_password(modern, config.hash_password(modern)))
+        self.assertTrue(config.check_password(legacy, config.hash_password(legacy)))
 
 
 if __name__ == "__main__":

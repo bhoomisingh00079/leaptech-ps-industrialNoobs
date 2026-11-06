@@ -47,6 +47,7 @@ LABELS = {
     "color_mode": "Colours", "language": "Language", "font_family": "Font", "font_size": "Text size",
     "ui_scale": "Window scale", "json_numbers": "JSON numbers", "csv_flat": "CSV as one table",
     "time_zone": "Time zone in processed_at", "rename_columns": "Rename columns", "setup_password": "Setup password",
+    "admin_idle_minutes": "Admin idle lock (minutes)",
     "shift_times": "Shift times", "keep_backup_days": "Keep back-up files (days)",
     "keep_history_days": "Keep history (days)", "alert_after_minutes": "Alert after (minutes)",
     "alert_notify": "Alerts: Windows notification", "alert_webhook_enabled": "Alerts: webhook on",
@@ -199,6 +200,13 @@ def record(data_dir, old, new, how="save", detail="", sha256=None):
     entry = _entry(how, detail, diff, sha256)
     _append(data_dir, entry)
     log.info("Settings changed (%s) by %s: %s", how, entry["user"], summary(entry), extra={"event": SETTINGS_CHANGED})
+    return entry
+
+
+def activity(data_dir, action, detail=""):
+    """Record an Admin access event without putting credentials in the audit trail."""
+    entry = _entry("access", detail or action, [], file_sha(Path(data_dir) / "config.json"))
+    _append(data_dir, entry)
     return entry
 
 

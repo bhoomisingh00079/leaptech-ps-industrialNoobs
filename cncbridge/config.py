@@ -15,7 +15,7 @@ from .csvread import split_patterns
 
 APP_NAME = "CNCBridge"
 VERSION = "1.2.0"
-SETTINGS_VERSION = 4  # the layout of config.json; MIGRATIONS bring an older file up to it
+SETTINGS_VERSION = 5  # the layout of config.json; MIGRATIONS bring an older file up to it
 OPERATOR_FILE = "operator.json"   # the typed values: what an operator may change without the setup rights
 SECRETS_FILE = "secrets.json"     # the encrypted passwords and tokens, apart so that they can be locked away
 
@@ -72,7 +72,8 @@ DEFAULT_CONFIG = {
     "csv_flat": False,                    # CSV: one plain table, one row per record
     "time_zone": False,                   # processed_at carries the PC's time zone, e.g. +05:30
     "rename_columns": "",                 # one "Old=New" per line, applied to the column names of every block
-    "setup_password": "",                 # hash of the password that locks the setup tabs; empty = no password
+    "setup_password": "",                 # salted Admin password hash; retained as a key for compatibility
+    "admin_idle_minutes": 0,                # log Admin out after this many idle minutes; 0 = off
     "shift_times": "",                    # e.g. "06:00, 14:00, 22:00": ask the operator to confirm the typed values
     "keep_backup_days": 0,                # delete back-up files older than this; 0 = keep them all
     "keep_history_days": 0,               # delete history rows older than this; 0 = keep them all
@@ -166,6 +167,7 @@ def normalize_config(cfg):
     base["keep_history_days"] = int(_number(base["keep_history_days"], 0, 0))
     base["alert_after_minutes"] = _number(base["alert_after_minutes"], 10, 0)
     base["heartbeat_minutes"] = _number(base["heartbeat_minutes"], 5, 1)
+    base["admin_idle_minutes"] = int(_number(base["admin_idle_minutes"], 0, 0))
     base["alert_email_port"] = int(_number(base["alert_email_port"], 587, 1))
     base["ftp_port"] = int(_number(base["ftp_port"], 21, 1))
     if base["ftp_port"] > 65535:
@@ -197,7 +199,14 @@ def _v3_to_v4(raw):
     return raw
 
 
-MIGRATIONS = {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4}
+def _v4_to_v5(raw):
+    # Keep the old key and hash: existing setup passwords become the Admin password without a reset.
+    raw.setdefault("setup_password", "")
+    raw.setdefault("admin_idle_minutes", 0)
+    return raw
+
+
+MIGRATIONS = {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5}
 
 
 def file_version(raw):
@@ -448,7 +457,7 @@ def import_settings(path, current):
 
 # ---------------------------------------------------------------- setup password
 PASSWORD_ROUNDS = 200_000
-MIN_PASSWORD = 4
+MIN_PASSWORD = 12
 
 
 def hash_password(password, salt=None, rounds=PASSWORD_ROUNDS):

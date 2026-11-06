@@ -55,6 +55,7 @@ class StatusMixin:
                 self.log_q.put((m.group(2), f"{m.group(1)}  {m.group(2):<7}  [background] {m.group(3)}"))
 
     def _tick(self):
+        self.check_admin_session()
         while True:
             try:
                 self.ui_q.get_nowait()()

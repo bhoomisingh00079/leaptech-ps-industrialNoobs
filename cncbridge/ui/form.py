@@ -22,7 +22,7 @@ class FormMixin:
             "alert_after_minutes", "alert_webhook_url", "alert_email_server", "alert_email_port",
             "alert_email_user", "alert_email_password", "alert_email_from", "alert_email_to",
             "keep_backup_days", "keep_history_days", "language", "ftp_host", "ftp_port", "ftp_user", "ftp_password",
-            "ftp_folder", "heartbeat_url", "heartbeat_folder", "heartbeat_minutes")}
+            "ftp_folder", "heartbeat_url", "heartbeat_folder", "heartbeat_minutes", "admin_idle_minutes")}
         self.b = {k: tk.BooleanVar(self) for k in ("shared_enabled", "api_enabled", "skip_duplicates", "autostart",
                                                     "json_numbers", "csv_flat", "time_zone",
                                                     "alert_notify", "alert_webhook_enabled", "alert_email_enabled",
@@ -37,7 +37,10 @@ class FormMixin:
             self.shift_confirmed = self._now()
             shifts.write_confirmed(self.data_dir, self.shift_confirmed)
         self.shift_dialog, self._shift_prompted, self._shift_checked = None, None, 0.0
-        self.unlocked = False        # the setup password was entered in this session
+        self.unlocked = False        # Admin authenticated in this session
+        self._admin_login_at = self._admin_last_input_at = None
+        self._admin_failures = 0
+        self._admin_retry_until = None
         self._pending_how = None     # ("import" | "restore", file name) until the loaded settings are saved
         self.password_state = tk.StringVar(self)
         self.protection_state = tk.StringVar(self)
@@ -54,7 +57,7 @@ class FormMixin:
 
     def fill(self, cfg):
         numbers = ("poll_seconds", "alert_after_minutes", "alert_email_port", "keep_backup_days",
-                   "keep_history_days", "ftp_port", "heartbeat_minutes")
+                   "keep_history_days", "ftp_port", "heartbeat_minutes", "admin_idle_minutes")
         for k, var in self.v.items():
             var.set(BODY_LABELS[cfg[k]] if k == "api_body" else f"{cfg[k]:g}" if k in numbers
                     else FONT_SIZE_LABELS[cfg[k]] if k == "font_size" else UI_SCALE_LABELS[cfg[k]] if k == "ui_scale"

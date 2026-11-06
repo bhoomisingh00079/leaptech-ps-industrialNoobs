@@ -49,7 +49,7 @@ class OptionsMixin:
         self.options_save_btn.pack(side="right", padx=8)
 
     def open_options(self, page=None):
-        if self.protected and not self.unlocked:
+        if not self.unlocked:
             return
         win = self.options_win
         if page:
@@ -390,21 +390,25 @@ class OptionsMixin:
         shift.pack(side="left")
         self.field_widgets["shift_times"] = shift
         ttk.Label(row, text=tr("  shift starts, e.g. 06:00, 14:00, 22:00"), style="CardSmall.TLabel").pack(side="left")
-        ttk.Label(box, text=tr("Setup password"), style="Card.TLabel").grid(row=1, column=0, sticky="w", pady=self.L.row)
+        ttk.Label(box, text=tr("Admin account"), style="Card.TLabel").grid(row=1, column=0, sticky="w", pady=self.L.row)
         row = ttk.Frame(box)
         row.grid(row=1, column=1, sticky="w", padx=8)
         ttk.Label(row, textvariable=self.password_state, style="Card.TLabel", width=14).pack(side="left")
-        set_pw = ttk.Button(row, text=tr("Set password..."), command=self.set_password)
-        set_pw.pack(side="left", padx=(6, 0))
-        self.remove_pw_btn = ttk.Button(row, text=tr("Remove"), command=self.remove_password)
-        self.remove_pw_btn.pack(side="left", padx=6)
-        self.field_widgets["set_password"] = set_pw
-        self.field_widgets["remove_password"] = self.remove_pw_btn
+        change_pw = ttk.Button(row, text=tr("Change Admin password..."), command=self.change_admin_password)
+        change_pw.pack(side="left", padx=(6, 0))
+        self.password_change_btn = change_pw
+        self.field_widgets["change_admin_password"] = change_pw
+        ttk.Label(box, text=tr("Log Admin out after idle (minutes; 0 = off)"),
+                  style="Card.TLabel").grid(row=2, column=0, sticky="w", pady=self.L.row)
+        idle = ttk.Spinbox(box, from_=0, to=480, increment=1, width=8, textvariable=self.v["admin_idle_minutes"])
+        idle.grid(row=2, column=1, sticky="w", padx=8)
+        self.field_widgets["admin_idle_minutes"] = idle
         note = ttk.Label(box, style="CardSmall.TLabel", wraplength=self.px(420), justify="left",
-                         text=tr("With a password, operators see only Start/Stop, the counters, History, the "
+                         text=tr("Admin sign-in unlocks setup. Operators can still use Start/Stop, the counters, History, the "
                               "Log and the typed values. It keeps settings from being changed by accident; it "
-                              "does not protect against someone who can open this PC's files."))
-        note.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(4, 0))
+                              "does not protect against someone who can open this PC's files. Sessions end after "
+                              "8 hours or sooner when an idle limit is set."))
+        note.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(4, 0))
         self._fit_wrap(note, self.px(420))
 
         guard = ttk.LabelFrame(parent, text=tr(" Protection "), padding=self.L.box_pad)

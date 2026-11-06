@@ -134,7 +134,7 @@ class TooltipsMixin:
                                                    "or change the typed values. Files keep being processed meanwhile."))
         Tooltip(self.field_widgets["restart_now"], tr("Save, then close this window and open it again with the "
                                                    "chosen look. Monitoring resumes by itself."))
-        Tooltip(self.field_widgets["set_password"], tr("Set or change the password that locks the setup tabs."))
-        Tooltip(self.field_widgets["remove_password"], tr("Remove the password so everyone can change settings."))
+        Tooltip(self.field_widgets["change_admin_password"], tr("Change the single Admin account password."))
+        Tooltip(self.field_widgets["admin_idle_minutes"], tr("Automatically return to the operator view after this many idle minutes; 0 disables idle logout."))
         Tooltip(self.field_widgets["operator_apply"], tr("Save the typed values; they apply from the next file."))
         Tooltip(self.slot_box, tr("Select which slot (range) you are editing."))

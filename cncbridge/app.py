@@ -159,6 +159,10 @@ class App(LayoutMixin,
             restyle_cards(self)  # the plain widgets inside a box take the card's colour
         self._bind_shortcuts()
         self._apply_lock()
+        for sequence in ("<KeyPress>", "<ButtonPress>", "<MouseWheel>"):
+            self.bind_all(sequence, self._mark_admin_activity, add="+")
+        if not self.protected:
+            self.after_idle(self.create_admin_password)
         self._update_protection_state()
         self._watch_setup_changes()
         self._refresh_checklist()

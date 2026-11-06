@@ -86,6 +86,15 @@ class ChangeLog(unittest.TestCase):
         entry = self.entries()[0]
         self.assertEqual((entry["how"], entry["detail"]), ("import", "line2 settings.json"))
 
+    def test_admin_access_activity_records_action_without_credentials(self):
+        config.save_config(settings(station_name="Line 9", setup_password=config.hash_password(SECRET)), self.path)
+        audit.activity(self.dir, "Admin login")
+        text = audit.log_path(self.dir).read_text(encoding="utf-8")
+        self.assertNotIn(SECRET, text)
+        entry = self.entries()[0]
+        self.assertEqual((entry["how"], entry["detail"], entry["changes"]),
+                         ("access", "Admin login", []))
+
     def test_the_log_is_tidied_to_the_newest_entries(self):
         saved = audit.KEEP, audit.TIDY_ABOVE_BYTES
         self.addCleanup(lambda: (setattr(audit, "KEEP", saved[0]), setattr(audit, "TIDY_ABOVE_BYTES", saved[1])))

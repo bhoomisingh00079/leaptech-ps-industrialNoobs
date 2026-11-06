@@ -17,7 +17,7 @@ import traceback
 import types
 import unittest
 from unittest import mock
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from tkinter import filedialog, font as tkfont, messagebox
 
@@ -158,7 +158,15 @@ class WindowTest(unittest.TestCase):
         self.window = self.make_window()
 
     def make_window(self):
-        return app.App(self.tmp / "data")
+        data = self.tmp / "data"
+        data.mkdir()
+        # Ordinary window tests begin with a known Admin account and an authenticated session.
+        # First-run setup and sign-in are covered by the focused tests below.
+        raw = config.normalize_config({"setup_password": config.hash_password("window-test-password")})
+        (data / "config.json").write_text(json.dumps(raw), encoding="utf-8")
+        window = app.App(data)
+        window._begin_admin_session()
+        return window
 
     def tearDown(self):
         shutil.rmtree(self.tmp, ignore_errors=True)
@@ -286,29 +294,17 @@ class SetupLock(WindowTest):
 
     def answers(self, *typed):
         queue = list(typed)
-        self._patch(app.simpledialog, "askstring", lambda *a, **k: queue.pop(0))
+        self._patch(self.window, "_show_admin_dialog", lambda _mode: queue.pop(0))
+        self._patch(self.window, "_wait_for_admin_retry", lambda: None)
 
-    def test_set_lock_unlock_and_remove(self):
+    def test_lock_unlock_wrong_login_and_cancel(self):
         w = self.window
 
         def steps():
-            self.assertEqual(self.visible(), ["normal", "normal", "normal", "hidden"])  # no password: as before
-            self.assertEqual(self.menu_state("lock"), "disabled")  # nothing to lock without a password
-
-            self.answers("abc")  # too short
-            w.set_password()
-            self.answers("secret1", "different")  # not the same twice
-            w.set_password()
-            self.assertFalse(w.protected)
-            self.assertEqual(len(self.dialogs), 2)
-
-            self.answers("secret1", "secret1")
-            w.set_password()
+            self.assertEqual(self.visible(), ["normal", "normal", "normal", "hidden"])
             self.assertTrue(w.protected and w.unlocked)
-            self.assertEqual(self.visible(), ["normal", "normal", "normal", "hidden"])  # the setter stays in setup
-            text = (self.tmp / "data" / "config.json").read_text(encoding="utf-8")
-            self.assertIn("pbkdf2$", text)
-            self.assertNotIn("secret1", text)
+            self.assertEqual(self.menu_state("lock"), "normal")
+            self.assertGreaterEqual(config.MIN_PASSWORD, 12)
 
             w.toggle_lock()  # lock
             self.assertEqual(self.visible(), ["hidden", "hidden", "hidden", "normal"])
@@ -325,32 +321,102 @@ class SetupLock(WindowTest):
             w.update()  # the run controls stay usable: monitoring is stopped, so Start and Process now are on
             self.assertEqual([str(b["state"]) for b in (w.start_btn, w.once_btn, w.stop_btn)],
                              ["normal", "normal", "disabled"])
-            self.assertEqual(w.password_state.get(), "Password is set")
+            self.assertEqual(w.password_state.get(), "Admin password is set")
 
             self.dialogs.clear()
-            self.answers("wrong")
+            self.answers({"username": "admin", "password": "wrong"})
             w.toggle_lock()
-            self.assertEqual((self.dialogs[0][0], self.visible()), ("showerror", ["hidden", "hidden", "hidden", "normal"]))
-            self.answers(None)  # cancelled
+            self.assertEqual((self.dialogs[-1][0], self.visible()),
+                             ("showerror", ["hidden", "hidden", "hidden", "normal"]))
+            self.answers(None)
             w.toggle_lock()
             self.assertEqual(self.visible(), ["hidden", "hidden", "hidden", "normal"])
-            self.answers("secret1")
+            self.answers({"username": "ADMIN", "password": "window-test-password"})
             w.toggle_lock()
             self.assertEqual(self.visible(), ["normal", "normal", "normal", "hidden"])
             self.assertEqual(self.menu_label("lock"), "Lock setup")
             self.assertEqual(str(w.save_btn["state"]), "normal")
             self.assertEqual([self.menu_state(k) for k in ("save", "options", "import", "simulation")], ["normal"] * 4)
 
-            self.dialogs.clear()
-            self.answers("wrong")
-            w.remove_password()
+            yield 100
+        self.run_steps(steps)
+
+    def test_password_change_requires_current_password_and_ends_session(self):
+        w = self.window
+
+        def steps():
+            self.answers({"current_password": "window-test-password", "new_password": "replacement-password",
+                          "repeat": "replacement-password"})
+            self.assertTrue(w.change_admin_password())
+            self.assertFalse(w.unlocked)
             self.assertTrue(w.protected)
-            self.answers("secret1")
-            w.remove_password()
-            self.assertFalse(w.protected)
-            self.assertEqual(self.visible(), ["normal", "normal", "normal", "hidden"])
-            self.assertEqual(self.menu_state("lock"), "disabled")
-            self.assertEqual(app.load_config(self.tmp / "data" / "config.json")["setup_password"], "")
+            self.assertEqual(self.visible(), ["hidden", "hidden", "hidden", "normal"])
+            self.assertTrue(config.check_password("replacement-password", w.cfg["setup_password"]))
+            yield 100
+        self.run_steps(steps)
+
+    def test_first_run_requires_admin_password_before_setup_unlocks(self):
+        first = app.App(self.tmp / "first-run")
+        self.addCleanup(first.destroy)
+        self.assertFalse(first.protected)
+        self.assertFalse(first.unlocked)
+        self.assertEqual(str(first.tabs.tab(first.setup_tab, "state")), "hidden")
+        self._patch(first, "_show_admin_dialog", lambda mode: {
+            "new_password": "first-run-admin-password", "repeat": "first-run-admin-password"}
+            if mode == "create" else None)
+        first.create_admin_password()
+        self.assertTrue(first.protected and first.unlocked)
+        self.assertTrue(config.check_password("first-run-admin-password", first.cfg["setup_password"]))
+        self.assertEqual(str(first.tabs.tab(first.setup_tab, "state")), "normal")
+
+    def test_short_legacy_password_is_accepted_once_then_forced_to_change(self):
+        w = self.window
+
+        def steps():
+            w._store_admin_password("old1")
+            w.unlocked = False
+            w._apply_lock()
+            queue = [
+                {"username": "aDmIn", "password": "old1"},
+                {"current_password": "old1", "new_password": "legacy-updated-password",
+                 "repeat": "legacy-updated-password"},
+            ]
+            self._patch(w, "_show_admin_dialog", lambda _mode: queue.pop(0))
+            self._patch(w, "_wait_for_admin_retry", lambda: None)
+            w._login_admin()
+            self.assertFalse(w.unlocked)  # sign in again after the forced change
+            self.assertTrue(config.check_password("legacy-updated-password", w.cfg["setup_password"]))
+            self.assertTrue(any(name == "showwarning" for name, _ in self.dialogs))
+            yield 100
+        self.run_steps(steps)
+
+    def test_login_backoff_and_eight_hour_session_expiry(self):
+        w = self.window
+
+        def steps():
+            clock = [datetime(2026, 1, 1, 12, 0)]
+            self._patch(w, "_now", lambda: clock[0])
+            self._patch(w, "_wait_for_admin_retry", lambda: None)
+            queue = [{"username": "operator", "password": "window-test-password"},
+                     {"username": "admin", "password": "wrong"},
+                     {"username": "ADMIN", "password": "window-test-password"}]
+            self._patch(w, "_show_admin_dialog", lambda _mode: queue.pop(0))
+            w.unlocked = False
+            w._apply_lock()
+            w._login_admin()
+            self.assertEqual((w._admin_failures, (w._admin_retry_until - clock[0]).total_seconds()), (1, 1))
+            w._login_admin()
+            self.assertEqual((w._admin_failures, (w._admin_retry_until - clock[0]).total_seconds()), (2, 2))
+            w._login_admin()
+            self.assertTrue(w.unlocked)
+            w.cfg["admin_idle_minutes"] = 5
+            clock[0] += timedelta(minutes=5)
+            w.check_admin_session()
+            self.assertFalse(w.unlocked)
+            w._begin_admin_session()
+            clock[0] += timedelta(hours=8)
+            w.check_admin_session()
+            self.assertFalse(w.unlocked)
             yield 100
         self.run_steps(steps)
 
@@ -360,8 +426,6 @@ class SetupLock(WindowTest):
         def steps():
             w.v["station_name"].set("Line 7")
             self.assertTrue(w.save())
-            self.answers("secret1", "secret1")
-            w.set_password()
             yield 100
         self.run_steps(steps)
         second = app.App(self.tmp / "data")
@@ -392,8 +456,6 @@ class SetupLock(WindowTest):
             w.man_vars[1][0].set("Work order"), w.man_vars[1][1].set("WO-1")
             w.cfg["stable_seconds"] = 0.3
             self.assertTrue(w.save())
-            self.answers("secret1", "secret1")
-            w.set_password()
             w.toggle_lock()
             self.assertEqual([lbl["text"] for lbl in w.operator_labels], ["Operator", "Work order"])
             w.start()
@@ -1173,7 +1235,7 @@ class MenuBar(WindowTest):
                         "run_in_background", "keep_backup_days", "json_numbers", "csv_flat", "time_zone",
                         "rename_columns", "alert_notify", "alert_email_to", "test_alert", "heartbeat_url", "test_heartbeat",
                         "protect_settings", "password_accounts", "restart_admin", "shift_times",
-                        "set_password", "theme_modern", "theme_legacy", "restart_now"):
+                        "change_admin_password", "theme_modern", "theme_legacy", "restart_now"):
                 widget = w.field_widgets[key]
                 self.assertTrue(str(widget).startswith(str(w.options_win)), key)  # in Options, not in a tab
             for key in ("station_name", "source_folder", "output_format_json", "selection_range_0", "shared_enabled",
@@ -1237,7 +1299,7 @@ class MenuBar(WindowTest):
         w = self.window
 
         def steps():
-            w._store_password(app.config.hash_password("secret1"))
+            w._store_admin_password("window-test-password")
             w.unlocked = False  # as after a restart: the password is set and not yet entered
             w._apply_lock()
             w.update()
@@ -1736,7 +1798,7 @@ class SettingsHistoryWindow(WindowTest):
         w = self.window
 
         def steps():
-            w._store_password(config.hash_password("opensesame"))
+            w._store_admin_password("window-test-password")
             w.open_settings_history()
             w.update()
             tree = w.history_tree
@@ -1875,7 +1937,7 @@ class ProtectionInWindow(WindowTest):
         self._patch(access_ui, "save_config", refused)
 
         def steps():
-            w._store_password(config.hash_password("opensesame"))
+            w._store_admin_password("window-test-password")
             self.assertEqual(self.restarts, [1])
             self.assertEqual(w.cfg["setup_password"], "")  # nothing changed
             yield 100
@@ -2158,7 +2220,7 @@ class FirstStartChecklist(WindowTest):
 
         def steps():
             self.assertTrue(w.checklist_shown)
-            w._store_password(config.hash_password("opensesame"))  # whoever sets it stays in the setup
+            w._store_admin_password("window-test-password")  # whoever sets it stays in the setup
             self.assertTrue(w.checklist_shown)
             w.toggle_lock()  # lock
             yield lambda: not w.checklist_shown
@@ -2314,7 +2376,7 @@ class DiagnosticsInWindow(WindowTest):
         self._patch(app.subprocess, "Popen", lambda command, *a, **k: None)
 
         def steps():
-            w._store_password(config.hash_password("opensesame"))
+            w._store_admin_password("window-test-password")
             w.toggle_lock()
             self.assertEqual(self.menu_state("save"), "disabled")  # locked
             self.assertEqual(self.menu_state("diagnostics"), "normal")  # but support can still be asked
@@ -2543,7 +2605,7 @@ class DashboardWindow(WindowTest):
             w.field_widgets["monitor_values"].invoke()
             yield lambda: w.tabs.select() == str(w.setup_tab)
             w._show_tab(w.monitor_tab)
-            w._store_password(config.hash_password("opensesame"))
+            w._store_admin_password("window-test-password")
             w.toggle_lock()
             yield lambda: w.tabs.select() == str(w.operator_tab)
             w._show_tab(w.monitor_tab)
@@ -2555,7 +2617,7 @@ class DashboardWindow(WindowTest):
         w = self.window
 
         def steps():
-            w._store_password(config.hash_password("opensesame"))
+            w._store_admin_password("window-test-password")
             w.toggle_lock()
             yield lambda: self.visible() == ["monitor", "history", "operator"]
             self.assertEqual(w.tabs.select(), str(w.operator_tab))
@@ -2734,7 +2796,7 @@ class DashboardWindow(WindowTest):
         w = self.window
 
         def steps():
-            w._store_password(config.hash_password("opensesame"))
+            w._store_admin_password("window-test-password")
             w.toggle_lock()
             yield lambda: all(str(b.cget("state")) == "disabled" for b in w.save_buttons)
         self.run_steps(steps)

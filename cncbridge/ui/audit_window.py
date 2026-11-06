@@ -13,7 +13,8 @@ class SettingsHistoryMixin:
     HISTORY_COLUMNS = (("when", N_("When"), 150), ("who", N_("Who"), 230), ("how", N_("How"), 120),
                        ("what", N_("What changed"), 620))
     HOW_TEXT = {"save": N_("Saved"), "import": N_("Imported"), "restore": N_("Restored"), "password": N_("Password"),
-                "operator": N_("Typed values"), "outside": N_("Outside CNCBridge"), "baseline": N_("Starting point")}
+                "operator": N_("Typed values"), "access": N_("Admin access"),
+                "outside": N_("Outside CNCBridge"), "baseline": N_("Starting point")}
     HISTORY_LIMIT = 2000
 
     def _build_settings_history(self):

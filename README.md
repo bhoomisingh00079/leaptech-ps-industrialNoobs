@@ -381,6 +381,7 @@ source `CNCBridge`), so tools that already watch the Event Log see them without 
 | 1000 / 1001 | monitoring started / stopped |
 | 1100 | settings changed (who and what, from the settings history) |
 | 1101 | settings file edited outside CNCBridge |
+| 1200–1203 | Admin login, failed login, logout, password changed |
 | 2000 / 2001 | an alert was raised / cleared |
 | 2100 | the heartbeat cannot be sent |
 | 3000 / 3001 | any other warning / error |
@@ -472,10 +473,14 @@ The fixed test files and the test script are also in `demo	est_files` and
 `demo\TEST_SCRIPT.md`. `tests\test_demo.py` checks that every test file ends up where the
 script says.
 
-## Setup password and the operator view
+## Admin account and the operator view
 
-In **Settings > Operators & access...**, **Set password...** protects the setup. Once it is set,
-choose **Settings > Lock setup**. Locked, the window shows only:
+On first start, CNCBridge asks you to create the single **Admin** password before setup can be opened.
+Use at least 12 characters. Existing setup password hashes are retained during the settings migration;
+if an existing password is shorter than 12 characters, it is accepted once and CNCBridge requires it to
+be changed before setup can be unlocked. Admin sign-in is case-insensitive for the username.
+
+Choose **Settings > Lock setup** or **File > Log out** when setup should be hidden. Locked, the window shows only:
 
 - **Start monitoring**, **Stop** and **Process now**, and the counters;
 - **History**, and the activity log under the View menu;
@@ -484,7 +489,10 @@ choose **Settings > Lock setup**. Locked, the window shows only:
 
 Setup, Delivery and Pick ranges are hidden, and Save settings, Options, Open CSV file and
 Simulation (and the other setup entries in the menus and their shortcuts) are disabled. **Unlock setup...** asks for the password. A restart starts locked.
-**Remove** (while unlocked) takes the password away again.
+In **Settings > Operators & access...**, **Change Admin password...** verifies the current password and ends the
+current Admin session after saving. The password cannot be removed. Sessions end after 8 hours; an optional
+**Log Admin out after idle (minutes)** setting can shorten that period (0 disables the idle limit). Repeated
+failed sign-ins use an increasing delay, up to 30 seconds.
 
 The password is kept as a salted hash, never as text. It is not part of an exported settings file,
 and importing a file or restoring an earlier version never changes it. This keeps settings from being

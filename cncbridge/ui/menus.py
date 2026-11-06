@@ -55,6 +55,8 @@ class MenusMixin:
         folders.add_command(label=tr("Data folder (send queue, rejected files, log file)"),
                             command=lambda: self._open_folder(self.data_dir))
         file_menu.add_separator()
+        item(file_menu, "logout", tr("Log out"), self.toggle_lock)
+        file_menu.add_separator()
         item(file_menu, "restart_admin", tr("Restart as administrator"), self.restart_as_administrator)
         item(file_menu, "exit", tr("Exit"), self.on_close)
 
