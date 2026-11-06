@@ -96,7 +96,7 @@ class MaterialSettings(unittest.TestCase):
         self.assertEqual(cfg["ysup_fields"], {"part_number": True, "reel_id": True, "lot_id": False})
         self.assertEqual(cfg["ysup_extra_fields"], [])
         self.assertEqual(cfg["ysup_import_folder"], "")
-        self.assertEqual(cfg["config_version"], 6)
+        self.assertEqual(cfg["config_version"], config.SETTINGS_VERSION)  # M3-ysup-receiver
 
     def test_partial_field_settings_merge_defaults_and_drop_blank_extra_names(self):
         cfg = config.normalize_config({"ysup_fields": {"lot_id": True},

@@ -67,6 +67,18 @@ rows are stored beside the CSV in `ysup_materials.refused.json`; that sidecar is
 is later replaced outside CNCBridge.
 <!-- /M2-materials -->
 
+<!-- M3-ysup-receiver -->
+## YSUP-Link receiver
+
+The optional YSUP-Link receiver accepts JSON POST requests at `/` or `/ysup/api` while monitoring is running.
+Enable it under **Settings > Options > YSUP-Link**. It is off by default and listens on
+`127.0.0.1:3001`; see [Configuration](docs/CONFIGURATION.md#ysup-link-receiver),
+[Operations](docs/OPERATIONS.md#ysup-link-receiver), and [Architecture](docs/ARCHITECTURE.md#ysup-link-listener)
+before exposing it to another host. No configured credentials means loopback-only access; configured credentials
+require Basic Auth or a token. SetupRequest and MaterialRequest return safe “verification is not configured”
+responses until M4 adds database-backed verification. The receiver does not add an API delivery format.
+<!-- /M3-ysup-receiver -->
+
 ## Install
 
 **With the set-up program.** Run `CNCBridgeSetup.exe` as an administrator (Windows asks). It installs

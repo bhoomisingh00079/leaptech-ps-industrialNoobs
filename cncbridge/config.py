@@ -16,7 +16,7 @@ from .csvread import split_patterns
 
 APP_NAME = "CNCBridge"
 VERSION = "1.2.0"
-SETTINGS_VERSION = 6  # the layout of config.json; MIGRATIONS bring an older file up to it
+SETTINGS_VERSION = 7  # the layout of config.json; MIGRATIONS bring an older file up to it
 OPERATOR_FILE = "operator.json"   # the typed values: what an operator may change without the setup rights
 SECRETS_FILE = "secrets.json"     # the encrypted passwords and tokens, apart so that they can be locked away
 
@@ -79,6 +79,12 @@ DEFAULT_CONFIG = {
     "ysup_fields": {"part_number": True, "reel_id": True, "lot_id": False},  # M2-materials
     "ysup_extra_fields": [],                # M2-materials: customer fields also checked by later YSUP lookups
     "ysup_import_folder": "",              # M2-materials: optional folder fed by a customer database export
+    "ysup_enabled": False,                  # M3-ysup-receiver: listen while monitoring is running
+    "ysup_listen_address": "127.0.0.1",    # M3-ysup-receiver: use 0.0.0.0 only on a trusted network
+    "ysup_port": 3001,                      # M3-ysup-receiver
+    "ysup_basic_username": "",              # M3-ysup-receiver
+    "ysup_basic_password": "",              # M3-ysup-receiver: encrypted in secrets.json
+    "ysup_api_token": "",                   # M3-ysup-receiver: encrypted in secrets.json
     "shift_times": "",                    # e.g. "06:00, 14:00, 22:00": ask the operator to confirm the typed values
     "keep_backup_days": 0,                # delete back-up files older than this; 0 = keep them all
     "keep_history_days": 0,               # delete history rows older than this; 0 = keep them all
@@ -104,7 +110,7 @@ DEFAULT_CONFIG = {
     "protect_settings": False,
     "password_accounts": "",                # Windows accounts that may read the saved passwords, one per line
 }
-SECRET_KEYS = ("api_token", "alert_email_password", "ftp_password")  # encrypted on disk, never exported
+SECRET_KEYS = ("api_token", "alert_email_password", "ftp_password", "ysup_basic_password", "ysup_api_token")  # M3-ysup-receiver secrets are encrypted
 
 log = logging.getLogger("cncbridge")
 
@@ -153,10 +159,14 @@ def normalize_config(cfg):
     base["file_pattern"] = "; ".join(split_patterns(base["file_pattern"]))
     base["alert_email_password"] = str(base["alert_email_password"] or "")  # spaces may be part of it
     base["ftp_password"] = str(base["ftp_password"] or "")
+    base["ysup_listen_address"] = str(base["ysup_listen_address"] or "127.0.0.1").strip() or "127.0.0.1"  # M3-ysup-receiver
+    base["ysup_basic_username"] = str(base["ysup_basic_username"] or "").strip()  # M3-ysup-receiver
+    base["ysup_basic_password"] = str(base["ysup_basic_password"] or "")  # M3-ysup-receiver
+    base["ysup_api_token"] = str(base["ysup_api_token"] or "")  # M3-ysup-receiver
     for key in ("shared_enabled", "api_enabled", "skip_duplicates", "autostart", "json_numbers", "csv_flat",
                 "time_zone", "alert_notify",
                 "alert_webhook_enabled", "alert_email_enabled", "alert_email_starttls", "ftp_enabled", "ftp_tls",
-                "ftp_passive", "heartbeat_enabled", "protect_settings"):
+                "ftp_passive", "heartbeat_enabled", "protect_settings", "ysup_enabled"):
         base[key] = bool(base[key])
     base["file_pattern"] = base["file_pattern"] or "*.csv"
     base["encoding"] = base["encoding"] or "auto"
@@ -189,6 +199,9 @@ def normalize_config(cfg):
     base["ftp_port"] = int(_number(base["ftp_port"], 21, 1))
     if base["ftp_port"] > 65535:
         base["ftp_port"] = 21
+    base["ysup_port"] = int(_number(base["ysup_port"], 3001, 1))  # M3-ysup-receiver
+    if base["ysup_port"] > 65535:  # M3-ysup-receiver
+        base["ysup_port"] = 3001  # M3-ysup-receiver
     base["config_version"] = SETTINGS_VERSION
     return base
 
@@ -231,8 +244,19 @@ def _v5_to_v6(raw):  # M2-materials
     return raw  # M2-materials
 
 
+def _v6_to_v7(raw):  # M3-ysup-receiver
+    raw.setdefault("ysup_enabled", False)  # M3-ysup-receiver
+    raw.setdefault("ysup_listen_address", "127.0.0.1")  # M3-ysup-receiver
+    raw.setdefault("ysup_port", 3001)  # M3-ysup-receiver
+    raw.setdefault("ysup_basic_username", "")  # M3-ysup-receiver
+    raw.setdefault("ysup_basic_password", "")  # M3-ysup-receiver
+    raw.setdefault("ysup_api_token", "")  # M3-ysup-receiver
+    return raw  # M3-ysup-receiver
+
+
 MIGRATIONS = {1: _v1_to_v2, 2: _v2_to_v3, 3: _v3_to_v4, 4: _v4_to_v5}
 MIGRATIONS[5] = _v5_to_v6  # M2-materials
+MIGRATIONS[6] = _v6_to_v7  # M3-ysup-receiver
 
 
 def file_version(raw):

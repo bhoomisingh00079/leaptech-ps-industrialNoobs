@@ -39,3 +39,14 @@ open with processing stopped. Successful imports update the configured shared CS
 rows are cached by file timestamps for fast lookups. Refused rows and last-import details are kept in a
 SHA-256-checked sidecar file. See [Configuration reference](CONFIGURATION.md#materials-database-settings-settings-version-6).
 <!-- /M2-materials -->
+
+<!-- M3-ysup-receiver -->
+## YSUP-Link receiver
+
+The optional listener accepts YSUP-Link JSON POSTs at `/` and `/ysup/api` while monitoring runs. It checks the
+client name, JSON content type, configured Basic Auth or token (or loopback-only access with no credentials), and
+the request envelope before dispatching a response. Each POST is recorded with its request and response in
+`ysup.db`; history retention follows `keep_history_days`. Port conflicts, repeated authentication failures, and
+slow replies use the existing alert and log path. SetupRequest and MaterialRequest are safely refused until M4
+adds database verification. The listener does not change API delivery behavior.
+<!-- /M3-ysup-receiver -->

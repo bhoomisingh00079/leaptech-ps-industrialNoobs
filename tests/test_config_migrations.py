@@ -48,6 +48,23 @@ class SettingsVersion(unittest.TestCase):
         self.assertEqual((cfg["setup_password"], cfg["admin_idle_minutes"], cfg["config_version"]),
                          ("", 0, config.SETTINGS_VERSION))
 
+    def test_v6_migration_adds_disabled_ysup_receiver_defaults(self):  # M3-ysup-receiver
+        self.write(config_version=6, station_name="Old station")  # M3-ysup-receiver
+        cfg = config.load_config(self.path)  # M3-ysup-receiver
+        self.assertEqual((cfg["ysup_enabled"], cfg["ysup_listen_address"], cfg["ysup_port"]),  # M3-ysup-receiver
+                         (False, "127.0.0.1", 3001))  # M3-ysup-receiver
+        self.assertEqual((cfg["ysup_basic_username"], cfg["ysup_basic_password"], cfg["ysup_api_token"]),  # M3-ysup-receiver
+                         ("", "", ""))  # M3-ysup-receiver
+
+    def test_ysup_receiver_settings_normalize_and_secrets_are_classified(self):  # M3-ysup-receiver
+        cfg = config.normalize_config({"ysup_enabled": 1, "ysup_listen_address": " 0.0.0.0 ",  # M3-ysup-receiver
+                                       "ysup_port": "65536", "ysup_basic_password": " p ",  # M3-ysup-receiver
+                                       "ysup_api_token": "token"})  # M3-ysup-receiver
+        self.assertEqual((cfg["ysup_enabled"], cfg["ysup_listen_address"], cfg["ysup_port"]),  # M3-ysup-receiver
+                         (True, "0.0.0.0", 3001))  # M3-ysup-receiver
+        self.assertIn("ysup_basic_password", config.SECRET_KEYS)  # M3-ysup-receiver
+        self.assertIn("ysup_api_token", config.SECRET_KEYS)  # M3-ysup-receiver
+
     def test_file_patterns_are_tidied(self):
         cfg = config.normalize_config({"file_pattern": " *.csv ;*.json;", "priority_patterns": "urgent_*\nrework_*"})
         self.assertEqual((cfg["file_pattern"], cfg["priority_patterns"]), ("*.csv; *.json", "urgent_*; rework_*"))

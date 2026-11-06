@@ -50,8 +50,9 @@ from .ui.pageheader import PageHeaderMixin
 from .ui.sidebar import SidebarMixin
 from .ui.status import StatusMixin
 from .ui.materials_window import MaterialsExtension  # M2-materials
+from .ui.ysup_window import YsupExtension  # M3-ysup-receiver
 
-EXTENSIONS = (MaterialsExtension,)  # M2-materials
+EXTENSIONS = (MaterialsExtension, YsupExtension)  # M3-ysup-receiver
 
 
 class App(LayoutMixin,

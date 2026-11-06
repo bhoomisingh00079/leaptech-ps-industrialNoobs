@@ -37,3 +37,23 @@ Automatic folder imports run on each processing scan, and every few seconds in a
 monitoring is stopped. Invalid imports raise an alert and do not replace the previous database. No additional
 Python package is required.
 <!-- /M2-materials -->
+
+<!-- M3-ysup-receiver -->
+## YSUP-Link receiver
+
+These keys are introduced in settings version 7.
+
+| Key | Default | Meaning |
+|---|---:|---|
+| `ysup_enabled` | `false` | Start the receiver while monitoring runs. |
+| `ysup_listen_address` | `127.0.0.1` | Interface to bind. Use `0.0.0.0` only for intentional remote access. |
+| `ysup_port` | `3001` | TCP listener port. |
+| `ysup_basic_username` | empty | Optional Basic Auth user name. |
+| `ysup_basic_password` | empty | Optional Basic Auth password; encrypted in `secrets.json`. |
+| `ysup_api_token` | empty | Optional bearer or `X-YSUP-Token` value; encrypted in `secrets.json`. |
+
+Configure these under **Settings > Options > YSUP-Link**. With no credentials configured, only loopback callers are
+accepted. When credentials are configured, use Basic Auth or a bearer token / `X-YSUP-Token`. Both `POST /` and
+`POST /ysup/api` are accepted. The listener is owned by the process holding the data-folder lock and stops with
+monitoring. SetupRequest and MaterialRequest refuse verification until M4 is configured.
+<!-- /M3-ysup-receiver -->

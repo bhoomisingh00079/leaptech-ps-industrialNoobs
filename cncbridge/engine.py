@@ -48,6 +48,8 @@ from .alerts import Alerts
 from .background import stop_requested
 from .config import APP_NAME, OPERATOR_FILE, VERSION, load_config, normalize_config
 from .ysup import materials as ysup_materials  # M2-materials
+from .ysup import records as ysup_records  # M3-ysup-receiver
+from .ysup.server import YsupServer  # M3-ysup-receiver
 # Everything that used to live in this file is still reachable as engine.<name>.
 from .csvread import (  # noqa: F401
     check_range, col_index, col_letter, decode, DELIMITERS, extract, extract_all, FileError, find_heading,
@@ -102,6 +104,8 @@ class Engine:
         self._last_beat = 0.0
         self._beat_thread = None
         self._beat_error = None   # why the last heartbeat could not be sent; set by its thread
+        self._ysup_server = None  # M3-ysup-receiver
+        self._ysup_settings = None  # M3-ysup-receiver
 
     def stop(self):
         self._stop.set()
@@ -368,23 +372,47 @@ class Engine:
         if time.time() - self._last_clean_up >= self.CLEAN_UP_EVERY:
             self._last_clean_up = time.time()
             clean_up(self.cfg, self.ledger)
+            ysup_records.clean_up(self.data, self.cfg["keep_history_days"])  # M3-ysup-receiver
         return done
+
+    def _sync_ysup_listener(self):  # M3-ysup-receiver
+        wanted = (bool(self.cfg.get("ysup_enabled")), self.cfg.get("ysup_listen_address", "127.0.0.1"),
+                  int(self.cfg.get("ysup_port", 3001)), self.cfg.get("ysup_basic_username", ""),
+                  self.cfg.get("ysup_basic_password", ""), self.cfg.get("ysup_api_token", ""))
+        listener_alive = bool(self._ysup_server and self._ysup_server.thread and self._ysup_server.thread.is_alive())
+        if wanted == self._ysup_settings and (not wanted[0] or listener_alive):
+            return
+        if self._ysup_server is not None:
+            self._ysup_server.stop()
+            self._ysup_server = None
+        self._ysup_settings = wanted
+        if wanted[0]:
+            self._ysup_server = YsupServer(self.cfg, self.data, self._report)
+            if not self._ysup_server.start():
+                self._ysup_server = None
 
     def run_forever(self):
         self._stop.clear()
         stop_requested(self.data)  # an old request must not stop this new run
         log.info("Monitoring %s", self.cfg["source_folder"], extra={"event": eventlog.STARTED})
-        while not self._stop.is_set():
-            if stop_requested(self.data):
-                log.info("Stop requested from the window")
-                break
-            try:
-                self.reload_settings()
-                self.scan_once()
-                self._heartbeat()
-            except Exception as e:  # never let the watcher die on the shop floor
-                self._report("scan", f"Scan error: {e}", logging.ERROR)
-            self._stop.wait(self.cfg["poll_seconds"])
+        try:
+            self._sync_ysup_listener()  # M3-ysup-receiver
+            while not self._stop.is_set():
+                if stop_requested(self.data):
+                    log.info("Stop requested from the window")
+                    break
+                try:
+                    self.reload_settings()
+                    self._sync_ysup_listener()  # M3-ysup-receiver
+                    self.scan_once()
+                    self._heartbeat()
+                except Exception as e:  # never let the watcher die on the shop floor
+                    self._report("scan", f"Scan error: {e}", logging.ERROR)
+                self._stop.wait(self.cfg["poll_seconds"])
+        finally:
+            if self._ysup_server is not None:  # M3-ysup-receiver
+                self._ysup_server.stop()  # M3-ysup-receiver
+                self._ysup_server = None  # M3-ysup-receiver
         log.info("Monitoring stopped", extra={"event": eventlog.STOPPED})
         self._heartbeat("stopped")
         self.alerts.reset()

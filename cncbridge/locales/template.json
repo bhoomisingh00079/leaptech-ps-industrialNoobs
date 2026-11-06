@@ -635,6 +635,15 @@
     "The diagnostics could not be saved:\n{e}": "",
     "Diagnostics saved in {file}. Send this one file to support; it holds no passwords.": "",
     "About {APP_NAME}": "",
-    "{APP_NAME} {VERSION}\n\nTakes the CSV file an assembly machine writes for every board, cuts out the cell ranges you choose, and delivers the result as JSON, CSV, TXT or PDF to a shared folder, an API link and/or an FTP server.\n\nData folder:\n{v2}\n\nThe bundled fonts Roboto, Roboto Mono, IBM Plex Sans and IBM Plex Mono are used under the SIL Open Font License.": ""
+    "{APP_NAME} {VERSION}\n\nTakes the CSV file an assembly machine writes for every board, cuts out the cell ranges you choose, and delivers the result as JSON, CSV, TXT or PDF to a shared folder, an API link and/or an FTP server.\n\nData folder:\n{v2}\n\nThe bundled fonts Roboto, Roboto Mono, IBM Plex Sans and IBM Plex Mono are used under the SIL Open Font License.": "",
+    "YSUP-Link": "",
+    "YSUP-Link receiver": "",
+    "Enable receiver while monitoring": "",
+    "Listen address": "",
+    "Basic Auth user name": "",
+    "Basic Auth password": "",
+    "API token": "",
+    "Use Basic Auth or a bearer/X-YSUP-Token value. Credentials are encrypted with the other saved secrets. The default address accepts local requests only; expose 0.0.0.0 only when firewall and credentials are configured.": "",
+    "The receiver starts and stops with monitoring. YSUP-Link may POST to / or /ysup/api.": ""
   }
 }

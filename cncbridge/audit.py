@@ -59,6 +59,8 @@ LABELS = {
     "heartbeat_url": "Heartbeat address", "heartbeat_folder": "Heartbeat folder",
     "heartbeat_minutes": "Heartbeat every (minutes)", "protect_settings": "Protect the settings",
     "password_accounts": "Accounts that may read the passwords",
+    "ysup_enabled": "YSUP-Link receiver: on", "ysup_listen_address": "YSUP-Link listen address",  # M3-ysup-receiver
+    "ysup_port": "YSUP-Link port", "ysup_basic_username": "YSUP-Link Basic Auth user",  # M3-ysup-receiver
 }
 
 
