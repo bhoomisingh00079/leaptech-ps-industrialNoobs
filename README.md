@@ -7,6 +7,17 @@ shared folder and/or an API link. The used machine file is then moved to a back-
 It is a native Windows program (`CNCBridge.exe`, about 12 MB). Nothing else has to be
 installed on the machine PC and it needs no internet connection.
 
+## Application scope in this branch
+
+This README documents the **CNCBridge desktop application**. The desktop build includes PDF output, the single
+Admin account and operator view, the searchable Materials database, and the optional authenticated YSUP-Link
+receiver. SetupRequest and MaterialRequest verification remain unavailable until database-backed verification
+is implemented; see [YSUP-Link receiver](docs/FEATURES.md#ysup-link-receiver) for its current behavior.
+
+The separate [`linebridge-Simulation/`](linebridge-Simulation/README.md) folder contains an earlier browser-based
+LineBridge demo and mock MES. That demo has its own README and does not currently share all of the desktop features
+listed above. In particular, its output renderer supports JSON, CSV and TXT; it does not implement PDF output.
+
 ## What it does with each file
 
 1. Watches the machine folder. A file is picked up once the machine has finished with it:
@@ -473,6 +484,8 @@ Command line: `--headless` (no window), `--headless --once` (process what is wai
 exit), `--data DIR` (use another data folder).
 
 ## Demo and test kit
+
+Watch the [LineBridge web and desktop feature walkthrough](https://youtu.be/gdg7u_4Z4y8).
 
 To show CNCBridge working without a real machine or a real MES, put `CNCBridgeDemo.exe`
 in the same folder as `CNCBridge.exe` and start it. It:

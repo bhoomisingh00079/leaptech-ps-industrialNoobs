@@ -6,6 +6,13 @@
 > Every factory's MES (Manufacturing Execution System) wants that data in its own format, over its own channel.
 > LineBridge sits in the middle on the machine PC, needs nothing but Python, and closes that gap in minutes instead of a custom integration project.
 
+> **This directory is the standalone browser-demo implementation.** Its feature list describes the code in
+> `linebridge-Simulation/`; it is separate from the CNCBridge desktop application documented in the repository-root
+> [README](../README.md). This demo currently supports JSON, CSV and TXT outputs. It does not include the desktop
+> Admin account, Materials database, YSUP-Link receiver or PDF renderer.
+
+Watch the [LineBridge web and desktop feature walkthrough](https://youtu.be/gdg7u_4Z4y8).
+
 ![Control panel](docs/screenshots/01_setup.png)
 
 ---
